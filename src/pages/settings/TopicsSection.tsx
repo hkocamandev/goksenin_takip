@@ -24,8 +24,16 @@ export function TopicsSection() {
   const subjects = subjectsFor(data.dersler, sinif);
   const ders = subjects.some((s) => s.ders === picked) ? picked : (subjects[0]?.ders ?? '');
   const list = topicsFor(data.konular, sinif, ders);
-  const others = data.konular.filter((t) => !(t.sinif === sinif && t.ders === ders));
-  const save = (next: string[]) => run(() => runAndReload((api) => api.saveTopics([...others, ...next.map((konu) => ({ ders, sinif, konu }))])));
+  // Değişiklik, sunucudaki güncel liste üzerine uygulanır: başka cihazda yapılan eklemeler silinmez.
+  const mutate = (transform: (current: string[]) => string[]) =>
+    run(() =>
+      runAndReload(async (api) => {
+        const fresh = await api.getAll();
+        const others = fresh.konular.filter((t) => !(t.sinif === sinif && t.ders === ders));
+        const next = transform(topicsFor(fresh.konular, sinif, ders));
+        await api.saveTopics([...others, ...next.map((konu) => ({ ders, sinif, konu }))]);
+      }),
+    );
 
   return (
     <Card label="Konular">
@@ -51,7 +59,7 @@ export function TopicsSection() {
               label={`${k} kaldır`}
               disabled={busy}
               onClick={() => {
-                if (window.confirm(`"${k}" konusu listeden kaldırılsın mı? Geçmiş kayıtlar silinmez.`)) void save(list.filter((x) => x !== k));
+                if (window.confirm(`"${k}" konusu listeden kaldırılsın mı? Geçmiş kayıtlar silinmez.`)) void mutate((cur) => cur.filter((x) => x !== k));
               }}
             >
               <Trash2 size={16} />
@@ -66,7 +74,7 @@ export function TopicsSection() {
           e.preventDefault();
           const t = name.trim();
           if (!t || !ders) return;
-          if (await save([...list, t])) setName('');
+          if (await mutate((cur) => [...cur, t])) setName('');
         }}
       >
         <input aria-label="Yeni konu" placeholder="Yeni konu adı" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />

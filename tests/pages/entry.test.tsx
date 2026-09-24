@@ -218,3 +218,17 @@ describe('Son kayıtlar', () => {
     expect(await screen.findByText('Henüz kayıt yok')).toBeInTheDocument();
   });
 });
+
+describe('Veri tazeleme', () => {
+  it('sekmeye 5 dakikadan uzun süre sonra dönülünce başka cihazdan girilen kayıtlar görünür', async () => {
+    const { api } = await renderApp();
+    await screen.findByText('Henüz kayıt yok');
+    await api.addRecord({ tarih: '2026-09-20', sinif: 8, ders: 'Fen Bilimleri', kaynak: 'Ödev', konu: '', soru: 10, dogru: 5, yanlis: 0, bos: 5 });
+    const now = Date.now();
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(now + 6 * 60 * 1000);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(await within(await screen.findByRole('list', { name: 'Son kayıtlar' })).findByText('Fen Bilimleri')).toBeInTheDocument();
+    spy.mockRestore();
+  });
+});
+

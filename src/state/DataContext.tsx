@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ApiError, errorMessage, type Api } from '../api/api';
 import type { AppData, ExamInput, ExamResult, RecordInput, RecordRow } from '../lib/types';
 import { useAuth } from './AuthContext';
@@ -15,6 +15,8 @@ interface DataValue {
 }
 
 const DataContext = createContext<DataValue | null>(null);
+
+const STALE_MS = 5 * 60 * 1000;
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { api, expire } = useAuth();
@@ -34,10 +36,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [expire],
   );
 
+  const loadedAt = useRef(0);
+
   const reload = useCallback(async () => {
     setError(null);
     try {
       setData(await guard(api.getAll()));
+      loadedAt.current = Date.now();
     } catch (e) {
       if (!(e instanceof ApiError && e.code === 'AUTH')) setError(errorMessage(e));
     }
@@ -45,6 +50,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  // Uzun süre açık kalan sekmeye dönülünce (telefon, ana ekran kısayolu) diğer cihazların kayıtlarını çek.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === 'visible' && Date.now() - loadedAt.current > STALE_MS) void reload();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    return () => {
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
   }, [reload]);
 
   const saveRecord = async (input: RecordInput, id?: string, clientId?: string) => {

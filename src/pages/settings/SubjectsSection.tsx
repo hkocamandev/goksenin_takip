@@ -46,16 +46,25 @@ export function SubjectsSection() {
   const [name, setName] = useState('');
 
   const list = subjectsFor(data.dersler, sinif);
-  const others = data.dersler.filter((s) => s.sinif !== sinif);
-  const save = (next: Subject[]) =>
-    run(() => runAndReload((api) => api.saveSubjects([...others, ...next.map((s, i) => ({ ...s, sira: i + 1 }))])));
-  const move = (i: number, d: -1 | 1) => {
-    const j = i + d;
-    if (j < 0 || j >= list.length) return;
-    const next = [...list];
-    [next[i], next[j]] = [next[j], next[i]];
-    void save(next);
-  };
+  // Değişiklik, sunucudaki güncel liste üzerine uygulanır: başka cihazda yapılan eklemeler silinmez.
+  const mutate = (transform: (current: Subject[]) => Subject[]) =>
+    run(() =>
+      runAndReload(async (api) => {
+        const fresh = await api.getAll();
+        const others = fresh.dersler.filter((s) => s.sinif !== sinif);
+        const next = transform(subjectsFor(fresh.dersler, sinif));
+        await api.saveSubjects([...others, ...next.map((s, i) => ({ ...s, sira: i + 1 }))]);
+      }),
+    );
+  const move = (ders: string, d: -1 | 1) =>
+    void mutate((cur) => {
+      const i = cur.findIndex((x) => x.ders === ders);
+      const j = i + d;
+      if (i < 0 || j < 0 || j >= cur.length) return cur;
+      const next = [...cur];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
 
   return (
     <Card label="Dersler">
@@ -76,13 +85,13 @@ export function SubjectsSection() {
               <NumberCell
                 label={`${s.ders} deneme soru sayısı`}
                 value={s.deneme_soru_sayisi}
-                onCommit={(n) => void save(list.map((x) => (x === s ? { ...x, deneme_soru_sayisi: n } : x)))}
+                onCommit={(n) => void mutate((cur) => cur.map((x) => (x.ders === s.ders ? { ...x, deneme_soru_sayisi: n } : x)))}
               />
             </label>
-            <IconButton label={`${s.ders} yukarı taşı`} disabled={i === 0 || busy} onClick={() => move(i, -1)}>
+            <IconButton label={`${s.ders} yukarı taşı`} disabled={i === 0 || busy} onClick={() => move(s.ders, -1)}>
               <ArrowUp size={16} />
             </IconButton>
-            <IconButton label={`${s.ders} aşağı taşı`} disabled={i === list.length - 1 || busy} onClick={() => move(i, 1)}>
+            <IconButton label={`${s.ders} aşağı taşı`} disabled={i === list.length - 1 || busy} onClick={() => move(s.ders, 1)}>
               <ArrowDown size={16} />
             </IconButton>
             <IconButton
@@ -90,7 +99,7 @@ export function SubjectsSection() {
               disabled={busy}
               onClick={() => {
                 if (window.confirm(`"${s.ders}" dersi ${sinif}. sınıf listesinden kaldırılsın mı? Geçmiş kayıtlar silinmez.`)) {
-                  void save(list.filter((x) => x !== s));
+                  void mutate((cur) => cur.filter((x) => x.ders !== s.ders));
                 }
               }}
             >
@@ -105,7 +114,7 @@ export function SubjectsSection() {
           e.preventDefault();
           const t = name.trim();
           if (!t) return;
-          if (await save([...list, { ders: t, sinif, deneme_soru_sayisi: 10, sira: list.length + 1 }])) setName('');
+          if (await mutate((cur) => [...cur, { ders: t, sinif, deneme_soru_sayisi: 10, sira: cur.length + 1 }])) setName('');
         }}
       >
         <input aria-label="Yeni ders" placeholder="Yeni ders adı" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />

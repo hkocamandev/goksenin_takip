@@ -21,6 +21,29 @@ describe('Ayarlar', () => {
     await waitFor(async () => expect((await api.getAll()).konular).not.toContainEqual({ ders: 'Matematik', sinif: 8, konu: 'Kümeler' }));
   });
 
+  it('başka cihazda eklenen konu, bu ekrandan konu eklenince silinmez', async () => {
+    const { user, api } = await renderApp({ route: '#/ayarlar' });
+    const r = await screen.findByRole('region', { name: 'Konular' });
+    await user.selectOptions(within(r).getByLabelText('Ders'), 'Matematik');
+    const d0 = await api.getAll();
+    await api.saveTopics([...d0.konular, { ders: 'Matematik', sinif: 8, konu: 'Başka cihazdan' }]);
+    await user.type(within(r).getByLabelText('Yeni konu'), 'Kümeler');
+    await user.click(within(r).getByRole('button', { name: 'Konu ekle' }));
+    await waitFor(async () => expect((await api.getAll()).konular).toContainEqual({ ders: 'Matematik', sinif: 8, konu: 'Kümeler' }));
+    expect((await api.getAll()).konular).toContainEqual({ ders: 'Matematik', sinif: 8, konu: 'Başka cihazdan' });
+  });
+
+  it('başka cihazda eklenen ders, bu ekrandan ders eklenince silinmez', async () => {
+    const { user, api } = await renderApp({ route: '#/ayarlar' });
+    const r = await screen.findByRole('region', { name: 'Dersler' });
+    const d0 = await api.getAll();
+    await api.saveSubjects([...d0.dersler, { ders: 'Bilişim', sinif: 8, deneme_soru_sayisi: 10, sira: 7 }]);
+    await user.type(within(r).getByLabelText('Yeni ders'), 'Görsel Sanatlar');
+    await user.click(within(r).getByRole('button', { name: 'Ders ekle' }));
+    await waitFor(async () => expect((await api.getAll()).dersler.some((d) => d.ders === 'Görsel Sanatlar')).toBe(true));
+    expect((await api.getAll()).dersler.some((d) => d.ders === 'Bilişim')).toBe(true);
+  });
+
   it('konu yeniden adlandırma geçmiş kayıtlara da yansır', async () => {
     const { user, api } = await renderApp({
       route: '#/ayarlar',
