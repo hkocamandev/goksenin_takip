@@ -266,9 +266,9 @@ function sheet_(name) {
   return sh;
 }
 
-// Sheets "2026-09-24" metnini Date'e çevirebilir; script saat diliminde geri yazıya çeviririz.
+// Sheets "2026-09-24" metnini tablonun saat diliminde Date'e çevirebilir; aynı dilimle geri yazıya çeviririz.
 function normalizeCell_(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  if (v instanceof Date) return Utilities.formatDate(v, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd');
   return v;
 }
 

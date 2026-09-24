@@ -4,7 +4,7 @@ Bu rehber bir kez yapılır (~15 dakika). Sonunda paylaşılabilir bir link elde
 
 ## 1. Google Sheet ve Apps Script
 
-1. [sheets.new](https://sheets.new) ile boş bir Google Sheet oluştur, adını "Göksenin Takip" yap. **Kimseyle paylaşma.**
+1. [sheets.new](https://sheets.new) ile boş bir Google Sheet oluştur, adını "Göksenin Takip" yap. **Kimseyle paylaşma.** Sheet'te **Dosya → Ayarlar → Saat dilimi**'ni `(GMT+03:00) İstanbul` yap.
 2. Menüden **Uzantılar → Apps Script**'i aç.
 3. Soldaki `Kod.gs` dosyasının içeriğini sil, bu repodaki `apps-script/Code.gs` içeriğini yapıştır.
 4. Sol üstteki **+ → Komut dosyası** ile `Seed` adında yeni dosya ekle, `apps-script/Seed.gs` içeriğini yapıştır.

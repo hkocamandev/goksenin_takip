@@ -44,11 +44,12 @@ describe('istemci kimliği (tekrar denemede çift kayıt önleme)', () => {
 });
 
 describe('Sheets hücre dönüşümü', () => {
-  it('Date hücresini script saat diliminde yyyy-MM-dd yapar (toISOString değil)', () => {
+  it('Date hücresini tablonun saat diliminde yyyy-MM-dd yapar (Sheets metni o dilimde Date yapar)', () => {
     const calls: unknown[][] = [];
     const gs = loadGs({
       Utilities: { formatDate: (...a: unknown[]) => { calls.push(a); return '2026-09-24'; } },
-      Session: { getScriptTimeZone: () => 'Europe/Istanbul' },
+      Session: { getScriptTimeZone: () => 'America/New_York' },
+      SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSpreadsheetTimeZone: () => 'Europe/Istanbul' }) },
     });
     const d = vm.runInContext('new Date(2026, 8, 24)', gs as vm.Context);
     expect(gs.normalizeCell_(d)).toBe('2026-09-24');
