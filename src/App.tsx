@@ -6,6 +6,7 @@ import { AnalysisPage } from './pages/AnalysisPage';
 import { EntryPage } from './pages/entry/EntryPage';
 import { LoginPage } from './pages/LoginPage';
 import { RankingPage } from './pages/RankingPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 import { AuthProvider, RequireAuth } from './state/AuthContext';
 import { DataProvider } from './state/DataContext';
 
@@ -39,6 +40,7 @@ export function App({ api = defaultApi }: { api?: Api }) {
             <Route index element={<EntryPage />} />
             <Route path="analiz" element={<AnalysisPage />} />
             <Route path="siralama" element={<RankingPage />} />
+            <Route path="ayarlar" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
