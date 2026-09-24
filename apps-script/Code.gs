@@ -23,7 +23,7 @@ var MSG = {
   kaynak: 'Geçerli bir kaynak seçin.',
   ders: 'Ders seçin.',
   konu: 'Konu adı boş olamaz.',
-  soru: 'Soru sayısı en az 1 olmalı.',
+  soru: 'Soru sayısı 1 ile 500 arasında olmalı.',
   sayi: '0 veya daha büyük bir tam sayı girin.',
   toplam: 'Doğru + yanlış + boş, soru sayısına eşit olmalı.',
   ad: 'Deneme adı boş olamaz.',
@@ -31,11 +31,24 @@ var MSG = {
   tekrar: 'Bu ad zaten var.',
   kullaniciAdi: 'Kullanıcı adı 3-30 karakter olmalı; yalnızca a-z, 0-9, nokta, tire ve alt çizgi.',
   adSoyad: 'Ad boş olamaz.',
-  sifre: 'Şifre en az 6 karakter olmalı.',
-  eskiSifre: 'Mevcut şifre hatalı.'
+  sifre: 'Şifre 8-200 karakter olmalı.',
+  eskiSifre: 'Mevcut şifre hatalı.',
+  metin: 'En fazla 100 karakter olabilir ve =, +, -, @ ile başlayamaz.',
+  listeUzun: 'Liste çok uzun.'
 };
 
+var LIMITS = { metin: 100, soru: 500, satir: 20, ders: 50, konu: 3000, sifreMin: 8, sifreMax: 200 };
+
 /* ---------------- Doğrulama ---------------- */
+
+// Google Sheets =, +, -, @ ile başlayan metni formül olarak yorumlayabilir (formül enjeksiyonu).
+function isSafeText_(s) {
+  return typeof s === 'string' && s.trim().length <= LIMITS.metin && !/^\s*[=+\-@]/.test(s);
+}
+
+function isValidPassword_(s) {
+  return typeof s === 'string' && s.length >= LIMITS.sifreMin && s.length <= LIMITS.sifreMax;
+}
 
 function isIsoDate_(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -67,7 +80,7 @@ function checkGrade_(sinif, key, errs) {
 
 function countErrors_(c, prefix) {
   var errs = {};
-  if (!isCount_(c.soru, 1)) errs[prefix + 'soru'] = MSG.soru;
+  if (!isCount_(c.soru, 1) || c.soru > LIMITS.soru) errs[prefix + 'soru'] = MSG.soru;
   ['dogru', 'yanlis', 'bos'].forEach(function (k) {
     if (!isCount_(c[k], 0)) errs[prefix + k] = MSG.sayi;
   });
@@ -86,20 +99,26 @@ function validateRecord_(r, today) {
   checkGrade_(r.sinif, 'sinif', errs);
   if (SINGLE_SOURCES.indexOf(r.kaynak) === -1) errs.kaynak = MSG.kaynak;
   if (isBlank_(r.ders)) errs.ders = MSG.ders;
+  else if (!isSafeText_(r.ders)) errs.ders = MSG.metin;
+  if (typeof r.konu === 'string' && r.konu !== '' && !isSafeText_(r.konu)) errs.konu = MSG.metin;
   return merge_(errs, countErrors_(r, ''));
 }
 
 function validateExam_(e, today) {
   var errs = {};
   if (isBlank_(e.ad)) errs.ad = MSG.ad;
+  else if (!isSafeText_(e.ad)) errs.ad = MSG.metin;
   checkDate_(e.tarih, today, errs);
   checkGrade_(e.sinif, 'sinif', errs);
   if (!Array.isArray(e.satirlar) || e.satirlar.length === 0) {
     errs.satirlar = MSG.satirYok;
+  } else if (e.satirlar.length > LIMITS.satir) {
+    errs.satirlar = MSG.listeUzun;
   } else {
     e.satirlar.forEach(function (s, i) {
       var p = 'satirlar.' + i + '.';
       if (isBlank_(s.ders)) errs[p + 'ders'] = MSG.ders;
+      else if (!isSafeText_(s.ders)) errs[p + 'ders'] = MSG.metin;
       merge_(errs, countErrors_(s, p));
     });
   }
@@ -108,10 +127,13 @@ function validateExam_(e, today) {
 
 function validateSubjects_(list) {
   var errs = {}, seen = {};
+  if (list.length > LIMITS.ders) return { dersler: MSG.listeUzun };
   list.forEach(function (s, i) {
     var p = 'dersler.' + i + '.';
     if (isBlank_(s.ders)) {
       errs[p + 'ders'] = MSG.ders;
+    } else if (!isSafeText_(s.ders)) {
+      errs[p + 'ders'] = MSG.metin;
     } else {
       var key = s.sinif + '|' + lower_(s.ders);
       if (seen[key]) errs[p + 'ders'] = MSG.tekrar;
@@ -126,18 +148,34 @@ function validateSubjects_(list) {
 
 function validateTopics_(list) {
   var errs = {}, seen = {};
+  if (list.length > LIMITS.konu) return { konular: MSG.listeUzun };
   list.forEach(function (t, i) {
     var p = 'konular.' + i + '.';
     if (isBlank_(t.ders)) errs[p + 'ders'] = MSG.ders;
+    else if (!isSafeText_(t.ders)) errs[p + 'ders'] = MSG.metin;
     checkGrade_(t.sinif, p + 'sinif', errs);
     if (isBlank_(t.konu)) {
       errs[p + 'konu'] = MSG.konu;
+    } else if (!isSafeText_(t.konu)) {
+      errs[p + 'konu'] = MSG.metin;
     } else {
       var key = t.sinif + '|' + (isBlank_(t.ders) ? '' : lower_(t.ders)) + '|' + lower_(t.konu);
       if (seen[key]) errs[p + 'konu'] = MSG.tekrar;
       seen[key] = true;
     }
   });
+  return errs;
+}
+
+// existing: mevcut kullanıcı adları (küçük harf).
+function validateNewUser_(input, existing) {
+  var errs = {};
+  var u = String(input.kullanici_adi == null ? '' : input.kullanici_adi).trim().toLowerCase();
+  if (!/^[a-z0-9._-]{3,30}$/.test(u)) errs.kullanici_adi = MSG.kullaniciAdi;
+  else if (existing.indexOf(u) !== -1) errs.kullanici_adi = MSG.tekrar;
+  if (isBlank_(input.ad)) errs.ad = MSG.adSoyad;
+  else if (!isSafeText_(input.ad)) errs.ad = MSG.metin;
+  if (!isValidPassword_(input.sifre)) errs.sifre = MSG.sifre;
   return errs;
 }
 
@@ -487,6 +525,7 @@ function saveTopics_(p) {
 function renameSubject_(p) {
   var sinif = p.sinif, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.ders, { yeni: MSG.ders });
+  if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
   if (eski === yeni) return null;
   var clash = readAll_('Dersler').some(function (s) {
     return s.sinif === sinif && s.ders !== eski && lower_(s.ders) === lower_(yeni);
@@ -502,6 +541,7 @@ function renameSubject_(p) {
 function renameTopic_(p) {
   var sinif = p.sinif, ders = p.ders, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.konu, { yeni: MSG.konu });
+  if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
   if (eski === yeni) return null;
   var clash = readAll_('Konular').some(function (t) {
     return t.sinif === sinif && t.ders === ders && t.konu !== eski && lower_(t.konu) === lower_(yeni);
@@ -514,17 +554,11 @@ function renameTopic_(p) {
 }
 
 function addUser_(p) {
-  var u = String(p.kullanici_adi || '').trim().toLowerCase();
-  var ad = String(p.ad || '').trim();
-  var sifre = String(p.sifre || '');
-  var errs = {};
-  if (!/^[a-z0-9._-]{3,30}$/.test(u)) errs.kullanici_adi = MSG.kullaniciAdi;
-  else if (readAll_('Kullanicilar').some(function (x) { return x.kullanici_adi === u; })) errs.kullanici_adi = MSG.tekrar;
-  if (!ad) errs.ad = MSG.adSoyad;
-  if (sifre.length < 6) errs.sifre = MSG.sifre;
-  requireValid_(errs);
+  var existing = readAll_('Kullanicilar').map(function (x) { return x.kullanici_adi; });
+  requireValid_(validateNewUser_(p, existing));
+  var u = String(p.kullanici_adi).trim().toLowerCase();
   var salt = newToken_().slice(0, 16);
-  appendMany_('Kullanicilar', [{ kullanici_adi: u, sifre_hash: hash_(salt, sifre), salt: salt, ad: ad }]);
+  appendMany_('Kullanicilar', [{ kullanici_adi: u, sifre_hash: hash_(salt, String(p.sifre)), salt: salt, ad: String(p.ad).trim() }]);
   return null;
 }
 
@@ -533,7 +567,7 @@ function changePassword_(p, user) {
   if (!me) fail_('AUTH', 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
   var errs = {};
   if (hash_(me.salt, String(p.eski || '')) !== me.sifre_hash) errs.eski = MSG.eskiSifre;
-  if (String(p.yeni || '').length < 6) errs.yeni = MSG.sifre;
+  if (!isValidPassword_(p.yeni)) errs.yeni = MSG.sifre;
   requireValid_(errs);
   var salt = newToken_().slice(0, 16);
   update_('Kullanicilar', me._row, { kullanici_adi: me.kullanici_adi, sifre_hash: hash_(salt, String(p.yeni)), salt: salt, ad: me.ad });

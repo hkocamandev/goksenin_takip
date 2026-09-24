@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MSG, countErrors, isIsoDate, validateExam, validateRecord, validateSubjects, validateTopics,
+  MSG, countErrors, isIsoDate, isValidPassword, validateExam, validateNewUser, validateRecord, validateSubjects, validateTopics,
 } from '../../src/lib/validation';
-import { TODAY, examCases, recordCases, subjectCases, topicCases } from '../fixtures/validationCases';
+import { TODAY, examCases, recordCases, subjectCases, topicCases, userCases } from '../fixtures/validationCases';
 
 const keys = (e: Record<string, string>) => Object.keys(e).sort();
 
@@ -39,5 +39,17 @@ describe('yardımcılar', () => {
   it('countErrors önek kullanır ve toplamı yalnızca alanlar geçerliyse kontrol eder', () => {
     expect(countErrors({ soru: 10, dogru: -1, yanlis: 0, bos: 0 }, 'satirlar.2.')).toEqual({ 'satirlar.2.dogru': MSG.sayi });
     expect(countErrors({ soru: 10, dogru: 5, yanlis: 0, bos: 0 })).toEqual({ toplam: MSG.toplam });
+  });
+});
+
+describe('validateNewUser / isValidPassword', () => {
+  it.each(userCases)('$name', ({ input, existing, keys: expected }) => {
+    expect(keys(validateNewUser(input, existing))).toEqual([...expected].sort());
+  });
+  it('şifre kuralı 8-200 karakter', () => {
+    expect(isValidPassword('1234567')).toBe(false);
+    expect(isValidPassword('12345678')).toBe(true);
+    expect(isValidPassword('x'.repeat(201))).toBe(false);
+    expect(MSG.sifre).toBe('Şifre 8-200 karakter olmalı.');
   });
 });
