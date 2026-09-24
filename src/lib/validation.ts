@@ -20,6 +20,7 @@ export const MSG = {
   eskiSifre: 'Mevcut şifre hatalı.',
   metin: 'En fazla 100 karakter olabilir ve =, +, -, @ ile başlayamaz.',
   listeUzun: 'Liste çok uzun.',
+  kilit: 'Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin.',
 } as const;
 
 export const LIMITS = { metin: 100, soru: 500, satir: 20, ders: 50, konu: 3000, sifreMin: 8, sifreMax: 200 } as const;
