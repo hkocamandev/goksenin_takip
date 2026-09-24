@@ -16,3 +16,4 @@ npm run build
 ```
 
 Yayına alma ve Google Sheet kurulumu için: [KURULUM.md](KURULUM.md)
+Güvenlik: [GUVENLIK.md](GUVENLIK.md)

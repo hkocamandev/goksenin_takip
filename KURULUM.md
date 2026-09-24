@@ -12,7 +12,7 @@ Bu rehber bir kez yapılır (~15 dakika). Sonunda paylaşılabilir bir link elde
    - *Saat dilimi*: `(GMT+03:00) İstanbul`
    - *Komut dosyası özellikleri* → şu üçünü ekle:
      - `SETUP_USER` → ilk kullanıcı adı (ör. `hasan`, küçük harf)
-     - `SETUP_PASS` → en az 6 karakterli şifre
+     - `SETUP_PASS` → en az 8 karakterli şifre
      - `SETUP_NAME` → görünen ad (ör. `Hasan`)
 6. Editöre dön, üstteki fonksiyon listesinden `setup` seç ve **Çalıştır**. Google izin isteyecek: hesabını seç → *Gelişmiş* → *Göksenin Takip'e git (güvenli değil)* → *İzin ver*. (Bu uyarı, script'i senin yazdığın için çıkar.)
 7. Sheet'e dön: `Kayitlar`, `Denemeler`, `Dersler`, `Konular`, `Kullanicilar` sekmeleri oluşmuş olmalı. `SETUP_PASS` güvenlik için otomatik silinir.
@@ -68,3 +68,5 @@ Bu fonksiyonlar editörden çalıştırıldığı için yeni dağıtım gerekmez
 | "Sunucudan beklenmeyen yanıt geldi" | Web App erişimi "Herkes" değil ya da URL `/exec` ile bitmiyor. |
 | "Kayitlar sekmesi bulunamadı" | Apps Script'te `setup` çalıştırılmamış. |
 | Giriş yapılamıyor | Kullanıcı adı küçük harfle yazılmalı; ilk kullanıcı `SETUP_USER` değeridir. |
+
+Güvenlik önlemleri ve yapılması gerekenler için: [GUVENLIK.md](GUVENLIK.md)
