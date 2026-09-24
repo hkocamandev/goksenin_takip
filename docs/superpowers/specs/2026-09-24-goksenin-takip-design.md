@@ -27,7 +27,7 @@ olmayan aile üyeleri tarafından (çoğunlukla telefondan) kullanılır.
   - 8. sınıf: Türkçe, Matematik, Fen Bilimleri, T.C. İnkılap Tarihi ve Atatürkçülük, Din Kültürü ve Ahlak Bilgisi, İngilizce
 - **Kaynak:** Sabit üç değer — `Deneme`, `Ödev`, `Kendi Çözdüğü`.
 - **Konu:** Ders + sınıf başına düzenlenebilir liste; başlangıçta MEB müfredat konularıyla doldurulur.
-- **Net** = doğru − yanlış / 4. Boşlar etkisizdir. Net negatif olabilir.
+- **Net** = doğru − yanlış / 3 (3 yanlış 1 doğruyu götürür; 2026-09-24 kullanıcı düzeltmesiyle 4 yerine 3). Boşlar etkisizdir. Net negatif olabilir.
 - **Net oranı** = net / soru sayısı × 100. İyileşme ve sıralamaların temel ölçüsüdür.
   Birden çok kaydın toplu net oranı = Σnet / Σsoru × 100 (kayıt başı oranların ortalaması değil).
 - Net ve net oranı Sheet'te saklanmaz; her zaman ham D/Y/B'den hesaplanır.

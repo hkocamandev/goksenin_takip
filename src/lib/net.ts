@@ -1,7 +1,8 @@
 import type { Counts } from './types';
 
+// LGS kuralı: 3 yanlış 1 doğruyu götürür, boşlar etkisizdir.
 export function net(dogru: number, yanlis: number): number {
-  return dogru - yanlis / 4;
+  return dogru - yanlis / 3;
 }
 
 export function netRate(netValue: number, soru: number): number | null {

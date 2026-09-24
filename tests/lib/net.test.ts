@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { formatDelta, formatNet, formatRate, net, netRate, round2, totals } from '../../src/lib/net';
 
 describe('net', () => {
-  it('4 yanlış 1 doğruyu götürür: 25 soru, 5 boş, 4 yanlış → 15 net', () => {
-    expect(net(16, 4)).toBe(15);
+  it('3 yanlış 1 doğruyu götürür: 25 soru, 16 doğru, 6 yanlış, 3 boş → 14 net', () => {
+    expect(net(16, 6)).toBe(14);
+  });
+  it('tam bölünmeyen yanlış sayısı kesirli net verir', () => {
+    expect(net(16, 4)).toBeCloseTo(14.6667, 4);
   });
   it('net negatif olabilir', () => {
-    expect(net(1, 8)).toBe(-1);
+    expect(net(1, 6)).toBe(-1);
   });
 });
 

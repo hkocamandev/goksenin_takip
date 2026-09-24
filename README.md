@@ -2,7 +2,7 @@
 
 7. ve 8. sınıf deneme, ödev ve kendi çözdüğü test sonuçlarını kaydeden; haftalık/aylık net gelişimini analiz eden ve sıralayan web uygulaması.
 
-- **Net** = doğru − yanlış ÷ 4 (boşlar etkisiz). İyileşme **net oranı** (net ÷ soru) üzerinden, ±2 puan eşiğiyle değerlendirilir.
+- **Net** = doğru − yanlış ÷ 3 (LGS kuralı: 3 yanlış 1 doğruyu götürür, boşlar etkisiz). İyileşme **net oranı** (net ÷ soru) üzerinden, ±2 puan eşiğiyle değerlendirilir.
 - Frontend: React + Vite + Tailwind + Recharts, GitHub Pages'te.
 - Backend: Google Apps Script + Google Sheet (`apps-script/`).
 

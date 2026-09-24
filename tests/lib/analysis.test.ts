@@ -40,7 +40,7 @@ describe('trendOf', () => {
 
 describe('seriesByPeriod', () => {
   it('boş dönemleri de içerir', () => {
-    const rows = [rec({ tarih: '2026-09-14', dogru: 8, bos: 2 }), rec({ tarih: '2026-09-24', dogru: 4, yanlis: 4, bos: 2 })];
+    const rows = [rec({ tarih: '2026-09-14', dogru: 8, bos: 2 }), rec({ tarih: '2026-09-24', dogru: 4, yanlis: 3, bos: 3 })];
     expect(seriesByPeriod(rows, '2026-09-07', '2026-09-24', 'week')).toEqual([
       { start: '2026-09-07', label: '7 Eyl', net: 0, oran: null, soru: 0 },
       { start: '2026-09-14', label: '14 Eyl', net: 8, oran: 80, soru: 10 },
@@ -88,7 +88,7 @@ describe('examSummaries', () => {
     { deneme_id: 'd0', ad: 'Eski', tarih: '2026-06-01', sinif: 8 },
   ];
   const rows = [
-    rec({ deneme_id: 'd2', kaynak: 'Deneme', tarih: '2026-09-20', ders: 'Türkçe', soru: 20, dogru: 16, yanlis: 4, bos: 0 }),
+    rec({ deneme_id: 'd2', kaynak: 'Deneme', tarih: '2026-09-20', ders: 'Türkçe', soru: 20, dogru: 16, yanlis: 3, bos: 1 }),
     rec({ deneme_id: 'd2', kaynak: 'Deneme', tarih: '2026-09-20', ders: 'Matematik', soru: 20, dogru: 10, yanlis: 0, bos: 10 }),
     rec({ deneme_id: 'd1', kaynak: 'Deneme', tarih: '2026-09-10', ders: 'Matematik', soru: 20, dogru: 8, yanlis: 0, bos: 12 }),
     rec({ deneme_id: 'd0', kaynak: 'Deneme', tarih: '2026-06-01', ders: 'Matematik', soru: 20, dogru: 5, yanlis: 0, bos: 15 }),

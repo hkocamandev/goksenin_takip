@@ -29,14 +29,14 @@ describe('Ödev / Kendi Çözdüğü formu', () => {
     await user.selectOptions(screen.getByLabelText('Konu'), 'Çarpanlar ve Katlar');
     await fill(user, 'Soru', '25');
     await fill(user, 'Doğru', '16');
-    await fill(user, 'Yanlış', '4');
-    expect(screen.getByLabelText('Boş')).toHaveValue(5);
+    await fill(user, 'Yanlış', '3');
+    expect(screen.getByLabelText('Boş')).toHaveValue(6);
     expect(screen.getByTestId('live-net')).toHaveTextContent('15');
     await user.click(screen.getByRole('button', { name: 'Kaydet' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Kaydedildi');
     const d = await api.getAll();
     expect(d.kayitlar).toHaveLength(1);
-    expect(d.kayitlar[0]).toMatchObject({ ders: 'Matematik', konu: 'Çarpanlar ve Katlar', kaynak: 'Ödev', soru: 25, dogru: 16, yanlis: 4, bos: 5 });
+    expect(d.kayitlar[0]).toMatchObject({ ders: 'Matematik', konu: 'Çarpanlar ve Katlar', kaynak: 'Ödev', soru: 25, dogru: 16, yanlis: 3, bos: 6 });
     expect(screen.getByLabelText('Soru')).toHaveValue(null); // sayılar sıfırlanır
     expect(within(screen.getByRole('list', { name: 'Son kayıtlar' })).getByText('Matematik')).toBeInTheDocument();
   });
@@ -176,9 +176,9 @@ describe('Deneme formu', () => {
     expect(screen.getByLabelText('Türkçe soru')).toHaveValue(20);
     expect(screen.getByLabelText('İngilizce soru')).toHaveValue(10);
     await user.type(screen.getByLabelText('Türkçe doğru'), '15');
-    await user.type(screen.getByLabelText('Türkçe yanlış'), '4');
+    await user.type(screen.getByLabelText('Türkçe yanlış'), '3');
     await user.type(screen.getByLabelText('Matematik doğru'), '10');
-    expect(screen.getByLabelText('Türkçe boş')).toHaveValue(1);
+    expect(screen.getByLabelText('Türkçe boş')).toHaveValue(2);
     expect(screen.getByTestId('exam-total')).toHaveTextContent('24');
     await user.click(screen.getByRole('button', { name: 'Denemeyi kaydet' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Kaydedildi');
