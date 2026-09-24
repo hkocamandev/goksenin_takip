@@ -33,6 +33,16 @@ describe('Code.gs doğrulaması frontend ile birebir aynı', () => {
   });
 });
 
+describe('istemci kimliği (tekrar denemede çift kayıt önleme)', () => {
+  it('yalnızca uuid benzeri kimlikleri kabul eder', () => {
+    const gs = loadGs();
+    expect(gs.isClientId_('3f2b8c1e-0d4a-4c1e-9a7b-2e5f6a7b8c9d')).toBe(true);
+    expect(gs.isClientId_('kısa')).toBe(false);
+    expect(gs.isClientId_('x'.repeat(65))).toBe(false);
+    expect(gs.isClientId_(undefined)).toBe(false);
+  });
+});
+
 describe('Sheets hücre dönüşümü', () => {
   it('Date hücresini script saat diliminde yyyy-MM-dd yapar (toISOString değil)', () => {
     const calls: unknown[][] = [];

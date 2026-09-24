@@ -18,6 +18,7 @@ interface SingleDraft {
   ders: string;
   konu: string;
   counts: CountDraft;
+  clientId?: string;
 }
 
 const isEmptyCounts = (c: CountDraft) => !c.soru && !c.dogru && !c.yanlis && !c.bos;
@@ -34,8 +35,8 @@ export function SingleForm({ kaynak, editing, onDone }: { kaynak: SingleSource; 
   const { saveRecord } = useData();
   const [draft, setDraft] = useDraft<SingleDraft>(
     editing ? null : `goksenin-draft-${kaynak}`,
-    () => (editing ? fromRecord(editing) : { tarih: todayIso(), sinif: 8, ders: '', konu: '', counts: EMPTY_COUNTS }),
-    (d) => (isEmptyCounts(d.counts) ? { ...d, tarih: todayIso() } : d),
+    () => (editing ? fromRecord(editing) : { tarih: todayIso(), sinif: 8, ders: '', konu: '', counts: EMPTY_COUNTS, clientId: crypto.randomUUID() }),
+    (d) => ({ ...d, tarih: isEmptyCounts(d.counts) ? todayIso() : d.tarih, clientId: d.clientId ?? crypto.randomUUID() }),
   );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
@@ -69,10 +70,10 @@ export function SingleForm({ kaynak, editing, onDone }: { kaynak: SingleSource; 
     inFlight.current = true;
     setSaving(true);
     try {
-      await saveRecord(input, editing?.id);
+      await saveRecord(input, editing?.id, draft.clientId);
       setSavedAt(Date.now());
       if (editing) onDone();
-      else setDraft((d) => ({ ...d, ders, counts: EMPTY_COUNTS }));
+      else setDraft((d) => ({ ...d, ders, counts: EMPTY_COUNTS, clientId: crypto.randomUUID() }));
     } catch (e) {
       if (e instanceof ApiError && e.code === 'VALIDATION' && e.details) setErrors(e.details);
       else if (!(e instanceof ApiError && e.code === 'AUTH')) setFailure(errorMessage(e));

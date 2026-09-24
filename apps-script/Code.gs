@@ -373,11 +373,20 @@ function findSingle_(id) {
   return r;
 }
 
+function isClientId_(x) {
+  return typeof x === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(x);
+}
+
+// Bağlantı yazmadan sonra koparsa istemci aynı kimlikle tekrar dener; ikinci kayıt açılmaz.
 function addRecord_(p, user) {
+  if (isClientId_(p.id)) {
+    var existing = readAll_('Kayitlar').filter(function (x) { return x.id === p.id; })[0];
+    if (existing) return strip_(existing);
+  }
   var input = p.input || {};
   requireValid_(validateRecord_(input, today_()));
   var rec = cleanRecordInput_(input);
-  rec.id = Utilities.getUuid();
+  rec.id = isClientId_(p.id) ? p.id : Utilities.getUuid();
   rec.deneme_id = '';
   rec.giren_kullanici = user;
   rec.olusturma_zamani = new Date().toISOString();
@@ -420,9 +429,16 @@ function buildExamRows_(exam, satirlar, user, created) {
 }
 
 function addExam_(p, user) {
+  if (isClientId_(p.deneme_id)) {
+    var found = readAll_('Denemeler').filter(function (x) { return x.deneme_id === p.deneme_id; })[0];
+    if (found) {
+      var rows = readAll_('Kayitlar').filter(function (r) { return r.deneme_id === found.deneme_id; });
+      return { exam: strip_(found), rows: rows.map(strip_) };
+    }
+  }
   var input = p.input || {};
   requireValid_(validateExam_(input, today_()));
-  var exam = { deneme_id: Utilities.getUuid(), ad: input.ad.trim(), tarih: input.tarih, sinif: input.sinif };
+  var exam = { deneme_id: isClientId_(p.deneme_id) ? p.deneme_id : Utilities.getUuid(), ad: input.ad.trim(), tarih: input.tarih, sinif: input.sinif };
   var rows = buildExamRows_(exam, input.satirlar, user, new Date().toISOString());
   appendMany_('Denemeler', [exam]);
   appendMany_('Kayitlar', rows);

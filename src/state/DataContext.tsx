@@ -7,9 +7,9 @@ interface DataValue {
   data: AppData | null;
   error: string | null;
   reload(): Promise<void>;
-  saveRecord(input: RecordInput, id?: string): Promise<RecordRow>;
+  saveRecord(input: RecordInput, id?: string, clientId?: string): Promise<RecordRow>;
   removeRecord(id: string): Promise<void>;
-  saveExam(input: ExamInput, id?: string): Promise<ExamResult>;
+  saveExam(input: ExamInput, id?: string, clientId?: string): Promise<ExamResult>;
   removeExam(id: string): Promise<void>;
   runAndReload(fn: (api: Api) => Promise<unknown>): Promise<void>;
 }
@@ -47,9 +47,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     void reload();
   }, [reload]);
 
-  const saveRecord = async (input: RecordInput, id?: string) => {
-    const row = await guard(id ? api.updateRecord(id, input) : api.addRecord(input));
-    setData((d) => d && { ...d, kayitlar: id ? d.kayitlar.map((r) => (r.id === id ? row : r)) : [...d.kayitlar, row] });
+  const saveRecord = async (input: RecordInput, id?: string, clientId?: string) => {
+    const row = await guard(id ? api.updateRecord(id, input) : api.addRecord(input, clientId));
+    setData((d) => d && { ...d, kayitlar: [...d.kayitlar.filter((r) => r.id !== row.id), row] });
     return row;
   };
 
@@ -58,8 +58,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData((d) => d && { ...d, kayitlar: d.kayitlar.filter((r) => r.id !== id) });
   };
 
-  const saveExam = async (input: ExamInput, id?: string) => {
-    const res = await guard(id ? api.updateExam(id, input) : api.addExam(input));
+  const saveExam = async (input: ExamInput, id?: string, clientId?: string) => {
+    const res = await guard(id ? api.updateExam(id, input) : api.addExam(input, clientId));
     const eid = res.exam.deneme_id;
     setData(
       (d) =>

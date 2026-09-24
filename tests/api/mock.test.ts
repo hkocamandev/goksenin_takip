@@ -31,6 +31,17 @@ describe('mock backend', () => {
     expect(err.code).toBe('VALIDATION');
     expect(err.details).toEqual({ toplam: MSG.toplam });
   });
+  it('aynı istemci kimliğiyle tekrar eklenen kayıt/deneme çoğalmaz', async () => {
+    const a = await api.addRecord(input, 'client-rec-0001');
+    const b = await api.addRecord(input, 'client-rec-0001');
+    expect(b.id).toBe(a.id);
+    const exam = { ad: 'D', tarih: '2026-09-20', sinif: 8 as const, satirlar: [{ ders: 'Türkçe', soru: 20, dogru: 10, yanlis: 0, bos: 10 }] };
+    await api.addExam(exam, 'client-exam-0001');
+    await api.addExam(exam, 'client-exam-0001');
+    const d = await api.getAll();
+    expect(d.kayitlar).toHaveLength(2);
+    expect(d.denemeler).toHaveLength(1);
+  });
   it('deneme ekler, günceller (satırları değiştirir) ve siler', async () => {
     const res = await api.addExam({
       ad: 'D1', tarih: '2026-09-20', sinif: 8,

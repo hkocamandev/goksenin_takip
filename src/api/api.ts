@@ -34,10 +34,11 @@ export function createApi(transport: Transport) {
     login: (kullanici_adi: string, sifre: string, hatirla: boolean) => call<Session>('login', { kullanici_adi, sifre, hatirla }),
     logout: () => call<null>('logout'),
     getAll: () => call<AppData>('getAll'),
-    addRecord: (input: RecordInput) => call<RecordRow>('addRecord', { input }),
+    // clientId: istemcide bir kez üretilir; bağlantı kopup tekrar denenirse sunucu aynı kaydı döndürür.
+    addRecord: (input: RecordInput, clientId?: string) => call<RecordRow>('addRecord', { input, id: clientId }),
     updateRecord: (id: string, input: RecordInput) => call<RecordRow>('updateRecord', { id, input }),
     deleteRecord: (id: string) => call<null>('deleteRecord', { id }),
-    addExam: (input: ExamInput) => call<ExamResult>('addExam', { input }),
+    addExam: (input: ExamInput, clientId?: string) => call<ExamResult>('addExam', { input, deneme_id: clientId }),
     updateExam: (deneme_id: string, input: ExamInput) => call<ExamResult>('updateExam', { deneme_id, input }),
     deleteExam: (deneme_id: string) => call<null>('deleteExam', { deneme_id }),
     saveSubjects: (dersler: Subject[]) => call<null>('saveSubjects', { dersler }),

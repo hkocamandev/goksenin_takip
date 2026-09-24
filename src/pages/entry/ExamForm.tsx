@@ -17,6 +17,7 @@ interface ExamDraft {
   tarih: string;
   sinif: Grade;
   rows: ExamRowDraft[];
+  clientId?: string;
 }
 
 const LABELS = { soru: 'soru', dogru: 'doğru', yanlis: 'yanlış' } as const;
@@ -44,8 +45,14 @@ export function ExamForm({ editing, onDone }: { editing?: { exam: Exam; rows: Re
   const { saveExam } = useData();
   const [draft, setDraft] = useDraft<ExamDraft>(
     editing ? null : 'goksenin-draft-Deneme',
-    () => (editing ? fromExam(data.dersler, editing.exam, editing.rows) : { ad: '', tarih: todayIso(), sinif: 8, rows: blankRows(data.dersler, 8) }),
-    (d) => (d.rows.every(isRowEmpty) ? { ...d, tarih: todayIso(), rows: blankRows(data.dersler, d.sinif) } : d),
+    () =>
+      editing
+        ? fromExam(data.dersler, editing.exam, editing.rows)
+        : { ad: '', tarih: todayIso(), sinif: 8, rows: blankRows(data.dersler, 8), clientId: crypto.randomUUID() },
+    (d) => ({
+      ...(d.rows.every(isRowEmpty) ? { ...d, tarih: todayIso(), rows: blankRows(data.dersler, d.sinif) } : d),
+      clientId: d.clientId ?? crypto.randomUUID(),
+    }),
   );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
@@ -80,10 +87,10 @@ export function ExamForm({ editing, onDone }: { editing?: { exam: Exam; rows: Re
     inFlight.current = true;
     setSaving(true);
     try {
-      await saveExam(input, editing?.exam.deneme_id);
+      await saveExam(input, editing?.exam.deneme_id, draft.clientId);
       setSavedAt(Date.now());
       if (editing) onDone();
-      else setDraft((d) => ({ ad: '', tarih: d.tarih, sinif: d.sinif, rows: blankRows(data.dersler, d.sinif) }));
+      else setDraft((d) => ({ ad: '', tarih: d.tarih, sinif: d.sinif, rows: blankRows(data.dersler, d.sinif), clientId: crypto.randomUUID() }));
     } catch (e) {
       if (e instanceof ApiError && e.code === 'VALIDATION' && e.details) setErrors(remapRowErrors(e.details, index));
       else if (!(e instanceof ApiError && e.code === 'AUTH')) setFailure(errorMessage(e));

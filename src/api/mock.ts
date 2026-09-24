@@ -45,6 +45,8 @@ function requireValid(errs: FieldErrors): void {
 
 const lower = (s: string) => s.trim().toLocaleLowerCase('tr');
 
+export const isClientId = (x: unknown): x is string => typeof x === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(x);
+
 // Apps Script backend'inin (apps-script/Code.gs) tarayıcıda çalışan eşdeğeri; yalnızca geliştirme içindir.
 export function createMockTransport(opts: MockOptions = {}): Transport {
   const storage = opts.storage === undefined ? defaultStorage() : opts.storage;
@@ -115,8 +117,10 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
       kullanicilar: db.kullanicilar.map(({ kullanici_adi, ad }) => ({ kullanici_adi, ad })),
     }),
     addRecord: (p, user) => {
+      const existing = isClientId(p.id) ? db.kayitlar.find((r) => r.id === p.id) : undefined;
+      if (existing) return existing;
       requireValid(validateRecord(p.input, today()));
-      const row: RecordRow = { ...cleanRecord(p.input), id: newId(), deneme_id: '', giren_kullanici: user, olusturma_zamani: now() };
+      const row: RecordRow = { ...cleanRecord(p.input), id: isClientId(p.id) ? p.id : newId(), deneme_id: '', giren_kullanici: user, olusturma_zamani: now() };
       db.kayitlar.push(row);
       return row;
     },
@@ -133,8 +137,10 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
     },
     addExam: (p, user) => {
       const input = p.input as ExamInput;
+      const existing = isClientId(p.deneme_id) ? db.denemeler.find((e) => e.deneme_id === p.deneme_id) : undefined;
+      if (existing) return { exam: existing, rows: db.kayitlar.filter((r) => r.deneme_id === existing.deneme_id) };
       requireValid(validateExam(input, today()));
-      const exam: Exam = { deneme_id: newId(), ad: input.ad.trim(), tarih: input.tarih, sinif: input.sinif };
+      const exam: Exam = { deneme_id: isClientId(p.deneme_id) ? p.deneme_id : newId(), ad: input.ad.trim(), tarih: input.tarih, sinif: input.sinif };
       const rows = examRows(exam, input, user, now());
       db.denemeler.push(exam);
       db.kayitlar.push(...rows);

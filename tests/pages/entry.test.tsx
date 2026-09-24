@@ -86,6 +86,52 @@ describe('Ödev / Kendi Çözdüğü formu', () => {
     expect(calls).toBe(2);
   });
 
+  it('sunucu yazdıktan sonra bağlantı koparsa "Tekrar dene" kaydı iki kez yazmaz', async () => {
+    let failed = false;
+    const { user, api } = await renderApp({
+      wrap: (inner) => async (a, p, t) => {
+        const res = await inner(a, p, t);
+        if (a === 'addRecord' && !failed) {
+          failed = true;
+          throw new ApiError('NETWORK', 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.');
+        }
+        return res;
+      },
+    });
+    await openTab(user, 'Ödev');
+    await fill(user, 'Soru', '10');
+    await fill(user, 'Doğru', '6');
+    await user.click(screen.getByRole('button', { name: 'Kaydet' }));
+    expect(await screen.findByText(/Sunucuya ulaşılamadı/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tekrar dene' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Kaydedildi');
+    expect((await api.getAll()).kayitlar).toHaveLength(1);
+  });
+
+  it('deneme için de bağlantı kopması sonrası tekrar deneme tek deneme yazar', async () => {
+    let failed = false;
+    const { user, api } = await renderApp({
+      wrap: (inner) => async (a, p, t) => {
+        const res = await inner(a, p, t);
+        if (a === 'addExam' && !failed) {
+          failed = true;
+          throw new ApiError('NETWORK', 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.');
+        }
+        return res;
+      },
+    });
+    await openTab(user, 'Deneme');
+    await user.type(screen.getByLabelText('Deneme adı'), 'D');
+    await user.type(screen.getByLabelText('Türkçe doğru'), '10');
+    await user.click(screen.getByRole('button', { name: 'Denemeyi kaydet' }));
+    expect(await screen.findByText(/Sunucuya ulaşılamadı/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tekrar dene' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Kaydedildi');
+    const d = await api.getAll();
+    expect(d.denemeler).toHaveLength(1);
+    expect(d.kayitlar).toHaveLength(1);
+  });
+
   it('oturum kayıt sırasında düşerse girişten sonra yazılanlar formda durur', async () => {
     let failed = false;
     const { user, api } = await renderApp({
