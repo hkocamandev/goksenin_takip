@@ -49,6 +49,17 @@ Bu rehber bir kez yapılır (~15 dakika). Sonunda paylaşılabilir bir link elde
 - Linki gönder. Kişiye **Ayarlar → Kullanıcılar**'dan kendi hesabını aç ve kullanıcı adı/şifresini ilet.
 - Telefonda linki açıp tarayıcı menüsünden **Ana ekrana ekle** dersen uygulama gibi açılır.
 
+## Demo veri (isteğe bağlı)
+
+Uygulamayı gerçek veriyle doldurmadan denemek için:
+
+1. Apps Script editöründe **+ → Komut dosyası** ile `DemoData` adında yeni bir dosya ekle, `apps-script/DemoData.gs` içeriğini yapıştır ve kaydet.
+2. Üstteki fonksiyon listesinden `demoVerileriOlustur` seç → **Çalıştır**. Birkaç saniye sürer; günlükte "Demo veri eklendi: … kayıt satırı, … deneme." yazar.
+3. Her 7. ve 8. sınıf konusu için Ödev ve Kendi Çözdüğü kaynaklarında toplam 250–1500 soruluk rastgele ama tutarlı sonuçlar, ayrıca 18 deneme (MEB dağılımı, 90 soru) oluşur. Tüm satırlar `giren_kullanici = demo-veri` ile işaretlidir.
+4. Silmek için `demoVerileriniSil` fonksiyonunu çalıştır. Yalnızca demo satırları silinir; gerçek kayıtlara dokunulmaz.
+
+Bu fonksiyonlar editörden çalıştırıldığı için yeni dağıtım gerekmez.
+
 ## Sorun giderme
 
 | Belirti | Çözüm |
