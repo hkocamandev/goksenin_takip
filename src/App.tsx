@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router';
 import type { Api } from './api/api';
 import { apiConfig, defaultApi } from './api/index';
 import { Layout } from './components/Layout';
+import { EntryPage } from './pages/entry/EntryPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthProvider, RequireAuth } from './state/AuthContext';
 import { DataProvider } from './state/DataContext';
@@ -33,7 +34,7 @@ export function App({ api = defaultApi }: { api?: Api }) {
               </RequireAuth>
             }
           >
-            <Route index element={null} />
+            <Route index element={<EntryPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
