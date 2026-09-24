@@ -9,12 +9,13 @@ import { RankingPage } from './pages/RankingPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { AuthProvider, RequireAuth } from './state/AuthContext';
 import { DataProvider } from './state/DataContext';
+import { isFramed } from './lib/security';
 
-function ConfigError({ message }: { message: string }) {
+function ConfigError({ title, message }: { title: string; message: string }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-bg p-6 text-ink">
       <div role="alert" className="max-w-md rounded-2xl border border-bad/40 bg-surface p-6">
-        <h1 className="font-display text-xl font-semibold">Kurulum tamamlanmamış</h1>
+        <h1 className="font-display text-xl font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted">{message}</p>
       </div>
     </div>
@@ -22,7 +23,10 @@ function ConfigError({ message }: { message: string }) {
 }
 
 export function App({ api = defaultApi }: { api?: Api }) {
-  if (apiConfig.mode === 'error') return <ConfigError message={apiConfig.message} />;
+  if (isFramed(window)) {
+    return <ConfigError title="Güvenlik uyarısı" message="Bu uygulama başka bir sitenin içinde açılamaz. Adresi doğrudan tarayıcıda açın." />;
+  }
+  if (apiConfig.mode === 'error') return <ConfigError title="Kurulum tamamlanmamış" message={apiConfig.message} />;
   return (
     <HashRouter>
       <AuthProvider api={api}>

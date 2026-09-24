@@ -16,6 +16,7 @@ export async function renderApp(opts: {
   seed?: (api: Api) => Promise<void>;
 } = {}) {
   localStorage.clear();
+  sessionStorage.clear();
   const api = makeApi(opts.wrap, opts.samples);
   const session = await api.login('demo', 'demo123', true);
   api.setToken(session.token);

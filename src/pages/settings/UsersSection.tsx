@@ -52,7 +52,7 @@ export function UsersSection() {
           <Field label="Görünen ad">
             <input className={inputCls} value={ad} onChange={(e) => setAd(e.target.value)} />
           </Field>
-          <Field label="Yeni kullanıcının şifresi" hint="en az 6 karakter">
+          <Field label="Yeni kullanıcının şifresi" hint="en az 8 karakter">
             <input className={inputCls} type="password" autoComplete="new-password" value={sifre} onChange={(e) => setSifre(e.target.value)} />
           </Field>
           {add.error && <p role="alert" className="text-sm text-bad">{add.error}</p>}
@@ -74,7 +74,7 @@ export function UsersSection() {
           <Field label="Mevcut şifre">
             <input className={inputCls} type="password" autoComplete="current-password" value={eski} onChange={(e) => setEski(e.target.value)} />
           </Field>
-          <Field label="Yeni şifre" hint="en az 6 karakter">
+          <Field label="Yeni şifre" hint="en az 8 karakter">
             <input className={inputCls} type="password" autoComplete="new-password" value={yeni} onChange={(e) => setYeni(e.target.value)} />
           </Field>
           {pw.error && <p role="alert" className="text-sm text-bad">{pw.error}</p>}

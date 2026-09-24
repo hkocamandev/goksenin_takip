@@ -15,6 +15,10 @@ var NUMERIC_COLUMNS = ['sinif', 'soru', 'dogru', 'yanlis', 'bos', 'deneme_soru_s
 var SINGLE_SOURCES = ['Ödev', 'Kendi Çözdüğü'];
 var DAY_MS = 24 * 60 * 60 * 1000;
 var TOKEN_PREFIX = 'tok_';
+var HASH_ITER = 2000;
+var LOGIN_MAX_FAILS = 5;
+var LOGIN_LOCK_SECONDS = 15 * 60;
+var MAX_BODY = 2000000;
 
 var MSG = {
   tarihGecersiz: 'Geçerli bir tarih girin.',
@@ -23,7 +27,7 @@ var MSG = {
   kaynak: 'Geçerli bir kaynak seçin.',
   ders: 'Ders seçin.',
   konu: 'Konu adı boş olamaz.',
-  soru: 'Soru sayısı en az 1 olmalı.',
+  soru: 'Soru sayısı 1 ile 500 arasında olmalı.',
   sayi: '0 veya daha büyük bir tam sayı girin.',
   toplam: 'Doğru + yanlış + boş, soru sayısına eşit olmalı.',
   ad: 'Deneme adı boş olamaz.',
@@ -31,11 +35,25 @@ var MSG = {
   tekrar: 'Bu ad zaten var.',
   kullaniciAdi: 'Kullanıcı adı 3-30 karakter olmalı; yalnızca a-z, 0-9, nokta, tire ve alt çizgi.',
   adSoyad: 'Ad boş olamaz.',
-  sifre: 'Şifre en az 6 karakter olmalı.',
-  eskiSifre: 'Mevcut şifre hatalı.'
+  sifre: 'Şifre 8-200 karakter olmalı.',
+  eskiSifre: 'Mevcut şifre hatalı.',
+  metin: 'En fazla 100 karakter olabilir ve =, +, -, @ ile başlayamaz.',
+  listeUzun: 'Liste çok uzun.',
+  kilit: 'Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin.'
 };
 
+var LIMITS = { metin: 100, soru: 500, satir: 20, ders: 50, konu: 3000, sifreMin: 8, sifreMax: 200 };
+
 /* ---------------- Doğrulama ---------------- */
+
+// Google Sheets =, +, -, @ ile başlayan metni formül olarak yorumlayabilir (formül enjeksiyonu).
+function isSafeText_(s) {
+  return typeof s === 'string' && s.trim().length <= LIMITS.metin && !/^\s*[=+\-@]/.test(s);
+}
+
+function isValidPassword_(s) {
+  return typeof s === 'string' && s.length >= LIMITS.sifreMin && s.length <= LIMITS.sifreMax;
+}
 
 function isIsoDate_(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -67,7 +85,7 @@ function checkGrade_(sinif, key, errs) {
 
 function countErrors_(c, prefix) {
   var errs = {};
-  if (!isCount_(c.soru, 1)) errs[prefix + 'soru'] = MSG.soru;
+  if (!isCount_(c.soru, 1) || c.soru > LIMITS.soru) errs[prefix + 'soru'] = MSG.soru;
   ['dogru', 'yanlis', 'bos'].forEach(function (k) {
     if (!isCount_(c[k], 0)) errs[prefix + k] = MSG.sayi;
   });
@@ -86,20 +104,26 @@ function validateRecord_(r, today) {
   checkGrade_(r.sinif, 'sinif', errs);
   if (SINGLE_SOURCES.indexOf(r.kaynak) === -1) errs.kaynak = MSG.kaynak;
   if (isBlank_(r.ders)) errs.ders = MSG.ders;
+  else if (!isSafeText_(r.ders)) errs.ders = MSG.metin;
+  if (typeof r.konu === 'string' && r.konu !== '' && !isSafeText_(r.konu)) errs.konu = MSG.metin;
   return merge_(errs, countErrors_(r, ''));
 }
 
 function validateExam_(e, today) {
   var errs = {};
   if (isBlank_(e.ad)) errs.ad = MSG.ad;
+  else if (!isSafeText_(e.ad)) errs.ad = MSG.metin;
   checkDate_(e.tarih, today, errs);
   checkGrade_(e.sinif, 'sinif', errs);
   if (!Array.isArray(e.satirlar) || e.satirlar.length === 0) {
     errs.satirlar = MSG.satirYok;
+  } else if (e.satirlar.length > LIMITS.satir) {
+    errs.satirlar = MSG.listeUzun;
   } else {
     e.satirlar.forEach(function (s, i) {
       var p = 'satirlar.' + i + '.';
       if (isBlank_(s.ders)) errs[p + 'ders'] = MSG.ders;
+      else if (!isSafeText_(s.ders)) errs[p + 'ders'] = MSG.metin;
       merge_(errs, countErrors_(s, p));
     });
   }
@@ -108,10 +132,13 @@ function validateExam_(e, today) {
 
 function validateSubjects_(list) {
   var errs = {}, seen = {};
+  if (list.length > LIMITS.ders) return { dersler: MSG.listeUzun };
   list.forEach(function (s, i) {
     var p = 'dersler.' + i + '.';
     if (isBlank_(s.ders)) {
       errs[p + 'ders'] = MSG.ders;
+    } else if (!isSafeText_(s.ders)) {
+      errs[p + 'ders'] = MSG.metin;
     } else {
       var key = s.sinif + '|' + lower_(s.ders);
       if (seen[key]) errs[p + 'ders'] = MSG.tekrar;
@@ -126,18 +153,34 @@ function validateSubjects_(list) {
 
 function validateTopics_(list) {
   var errs = {}, seen = {};
+  if (list.length > LIMITS.konu) return { konular: MSG.listeUzun };
   list.forEach(function (t, i) {
     var p = 'konular.' + i + '.';
     if (isBlank_(t.ders)) errs[p + 'ders'] = MSG.ders;
+    else if (!isSafeText_(t.ders)) errs[p + 'ders'] = MSG.metin;
     checkGrade_(t.sinif, p + 'sinif', errs);
     if (isBlank_(t.konu)) {
       errs[p + 'konu'] = MSG.konu;
+    } else if (!isSafeText_(t.konu)) {
+      errs[p + 'konu'] = MSG.metin;
     } else {
       var key = t.sinif + '|' + (isBlank_(t.ders) ? '' : lower_(t.ders)) + '|' + lower_(t.konu);
       if (seen[key]) errs[p + 'konu'] = MSG.tekrar;
       seen[key] = true;
     }
   });
+  return errs;
+}
+
+// existing: mevcut kullanıcı adları (küçük harf).
+function validateNewUser_(input, existing) {
+  var errs = {};
+  var u = String(input.kullanici_adi == null ? '' : input.kullanici_adi).trim().toLowerCase();
+  if (!/^[a-z0-9._-]{3,30}$/.test(u)) errs.kullanici_adi = MSG.kullaniciAdi;
+  else if (existing.indexOf(u) !== -1) errs.kullanici_adi = MSG.tekrar;
+  if (isBlank_(input.ad)) errs.ad = MSG.adSoyad;
+  else if (!isSafeText_(input.ad)) errs.ad = MSG.metin;
+  if (!isValidPassword_(input.sifre)) errs.sifre = MSG.sifre;
   return errs;
 }
 
@@ -150,10 +193,24 @@ function doGet() {
 function doPost(e) {
   var res;
   try {
-    var req = JSON.parse(e.postData.contents);
+    var raw = e && e.postData && e.postData.contents;
+    if (typeof raw !== 'string' || raw.length > MAX_BODY) fail_('SERVER', 'Geçersiz istek.');
+    var req;
+    try {
+      req = JSON.parse(raw);
+    } catch (parseErr) {
+      fail_('SERVER', 'Geçersiz istek.');
+    }
+    if (!req || typeof req.action !== 'string') fail_('SERVER', 'Geçersiz istek.');
     res = { ok: true, data: route_(req) };
   } catch (err) {
-    res = { ok: false, error: err.code || 'SERVER', message: err.message || String(err), details: err.details || null };
+    if (err && err.code) {
+      res = { ok: false, error: err.code, message: err.message, details: err.details || null };
+    } else {
+      // İç hata ayrıntısı (sekme adı, satır, yığın) istemciye gönderilmez; yalnızca Apps Script günlüğüne yazılır.
+      console.error(err && err.stack ? err.stack : err);
+      res = { ok: false, error: 'SERVER', message: 'Beklenmeyen bir sunucu hatası oluştu. Tekrar deneyin.', details: null };
+    }
   }
   return json_(res);
 }
@@ -200,9 +257,13 @@ function route_(req) {
   var handler = WRITE_HANDLERS[req.action];
   if (!handler) fail_('SERVER', 'Bilinmeyen işlem: ' + req.action);
   var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
   try {
-    return handler(p, user);
+    lock.waitLock(20000);
+  } catch (lockErr) {
+    fail_('SERVER', 'Sunucu meşgul, birkaç saniye sonra tekrar deneyin.');
+  }
+  try {
+    return handler(p, user, req.token);
   } finally {
     lock.releaseLock();
   }
@@ -210,9 +271,39 @@ function route_(req) {
 
 /* ---------------- Oturum ---------------- */
 
-function hash_(salt, pass) {
-  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + ':' + pass, Utilities.Charset.UTF_8);
+function bytesToHex_(bytes) {
   return bytes.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}
+
+// Eski biçim (tek tur SHA-256). Yalnızca eski özetleri doğrulamak için tutulur.
+function hash_(salt, pass) {
+  return bytesToHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + ':' + pass, Utilities.Charset.UTF_8));
+}
+
+// PBKDF2-HMAC-SHA256, tek blok (32 bayt). Biçim: v2$<tur>$<hex>.
+function hashPassword_(salt, pass, iter) {
+  var n = iter || HASH_ITER;
+  var key = Utilities.newBlob(pass).getBytes();
+  var u = Utilities.computeHmacSha256Signature(Utilities.newBlob(salt).getBytes().concat([0, 0, 0, 1]), key);
+  var acc = u.slice();
+  for (var i = 1; i < n; i++) {
+    u = Utilities.computeHmacSha256Signature(u, key);
+    for (var j = 0; j < acc.length; j++) acc[j] ^= u[j];
+  }
+  return 'v2$' + n + '$' + bytesToHex_(acc);
+}
+
+function safeEqual_(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function verifyPassword_(user, pass) {
+  var stored = String(user.sifre_hash || '');
+  if (stored.indexOf('v2$') === 0) return safeEqual_(hashPassword_(user.salt, pass, Number(stored.split('$')[1])), stored);
+  return safeEqual_(hash_(user.salt, pass), stored);
 }
 
 function newToken_() {
@@ -232,11 +323,26 @@ function cleanupTokens_(props) {
 }
 
 function login_(p) {
-  var u = String(p.kullanici_adi || '').trim().toLowerCase();
+  var u = String(p.kullanici_adi || '').trim().toLowerCase().slice(0, 60);
+  var cache = CacheService.getScriptCache();
+  var failKey = 'fail_' + u;
+  var fails = Number(cache.get(failKey) || 0);
+  // Kaba kuvvet koruması: kullanıcı adı başına 5 hatalı denemeden sonra 15 dakika kilit.
+  // Olmayan kullanıcı adları da sayılır; böylece hangi adların var olduğu anlaşılamaz.
+  if (fails >= LOGIN_MAX_FAILS) {
+    Utilities.sleep(1000);
+    fail_('LOGIN', MSG.kilit);
+  }
   var me = readAll_('Kullanicilar').filter(function (x) { return x.kullanici_adi === u; })[0];
-  if (!me || hash_(me.salt, String(p.sifre || '')) !== me.sifre_hash) {
+  var pass = String(p.sifre || '');
+  if (!me || !verifyPassword_(me, pass)) {
+    cache.put(failKey, String(fails + 1), LOGIN_LOCK_SECONDS);
     Utilities.sleep(1000);
     fail_('LOGIN', 'Kullanıcı adı veya şifre hatalı.');
+  }
+  cache.remove(failKey);
+  if (String(me.sifre_hash).indexOf('v2$') !== 0 || Number(String(me.sifre_hash).split('$')[1]) < HASH_ITER) {
+    upgradeHash_(me, pass);
   }
   var props = PropertiesService.getScriptProperties();
   cleanupTokens_(props);
@@ -244,6 +350,31 @@ function login_(p) {
   var days = p.hatirla ? 30 : 1;
   props.setProperty(TOKEN_PREFIX + token, JSON.stringify({ u: me.kullanici_adi, exp: Date.now() + days * DAY_MS }));
   return { token: token, kullanici_adi: me.kullanici_adi, ad: me.ad };
+}
+
+// Eski özetle giriş yapan kullanıcının özetini şifre elimizdeyken güçlü biçime taşır.
+function upgradeHash_(me, pass) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    var salt = newToken_().slice(0, 16);
+    update_('Kullanicilar', me._row, { kullanici_adi: me.kullanici_adi, sifre_hash: hashPassword_(salt, pass), salt: salt, ad: me.ad });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Şifre değişince kullanıcının diğer cihazlardaki oturumlarını kapatır.
+function revokeTokens_(props, user, keepToken) {
+  var all = props.getProperties();
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf(TOKEN_PREFIX) !== 0 || k === TOKEN_PREFIX + keepToken) return;
+    try {
+      if (JSON.parse(all[k]).u === user) props.deleteProperty(k);
+    } catch (e) {
+      props.deleteProperty(k);
+    }
+  });
 }
 
 function requireUser_(token) {
@@ -309,10 +440,18 @@ function ensureRows_(sh, lastNeeded) {
   if (missing > 0) sh.insertRowsAfter(sh.getMaxRows(), missing);
 }
 
+// Yeni satırlarda metin sütunları düz metin olsun: Sheets tarihleri Date'e, "=..." metinlerini formüle çevirmesin.
+function formatTextColumns_(sh, name, startRow, numRows) {
+  SHEETS[name].forEach(function (col, j) {
+    if (NUMERIC_COLUMNS.indexOf(col) === -1) sh.getRange(startRow, j + 1, numRows, 1).setNumberFormat('@');
+  });
+}
+
 function appendMany_(name, objs) {
   if (!objs.length) return;
   var sh = sheet_(name), start = sh.getLastRow() + 1;
   ensureRows_(sh, start + objs.length - 1);
+  formatTextColumns_(sh, name, start, objs.length);
   sh.getRange(start, 1, objs.length, SHEETS[name].length).setValues(objs.map(function (o) { return rowValues_(name, o); }));
 }
 
@@ -330,6 +469,7 @@ function replaceAll_(name, objs) {
   if (last > 1) sh.getRange(2, 1, last - 1, width).clearContent();
   if (!objs.length) return;
   ensureRows_(sh, objs.length + 1);
+  formatTextColumns_(sh, name, 2, objs.length);
   sh.getRange(2, 1, objs.length, width).setValues(objs.map(function (o) { return rowValues_(name, o); }));
 }
 
@@ -487,6 +627,7 @@ function saveTopics_(p) {
 function renameSubject_(p) {
   var sinif = p.sinif, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.ders, { yeni: MSG.ders });
+  if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
   if (eski === yeni) return null;
   var clash = readAll_('Dersler').some(function (s) {
     return s.sinif === sinif && s.ders !== eski && lower_(s.ders) === lower_(yeni);
@@ -502,6 +643,7 @@ function renameSubject_(p) {
 function renameTopic_(p) {
   var sinif = p.sinif, ders = p.ders, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.konu, { yeni: MSG.konu });
+  if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
   if (eski === yeni) return null;
   var clash = readAll_('Konular').some(function (t) {
     return t.sinif === sinif && t.ders === ders && t.konu !== eski && lower_(t.konu) === lower_(yeni);
@@ -514,29 +656,24 @@ function renameTopic_(p) {
 }
 
 function addUser_(p) {
-  var u = String(p.kullanici_adi || '').trim().toLowerCase();
-  var ad = String(p.ad || '').trim();
-  var sifre = String(p.sifre || '');
-  var errs = {};
-  if (!/^[a-z0-9._-]{3,30}$/.test(u)) errs.kullanici_adi = MSG.kullaniciAdi;
-  else if (readAll_('Kullanicilar').some(function (x) { return x.kullanici_adi === u; })) errs.kullanici_adi = MSG.tekrar;
-  if (!ad) errs.ad = MSG.adSoyad;
-  if (sifre.length < 6) errs.sifre = MSG.sifre;
-  requireValid_(errs);
+  var existing = readAll_('Kullanicilar').map(function (x) { return x.kullanici_adi; });
+  requireValid_(validateNewUser_(p, existing));
+  var u = String(p.kullanici_adi).trim().toLowerCase();
   var salt = newToken_().slice(0, 16);
-  appendMany_('Kullanicilar', [{ kullanici_adi: u, sifre_hash: hash_(salt, sifre), salt: salt, ad: ad }]);
+  appendMany_('Kullanicilar', [{ kullanici_adi: u, sifre_hash: hashPassword_(salt, String(p.sifre)), salt: salt, ad: String(p.ad).trim() }]);
   return null;
 }
 
-function changePassword_(p, user) {
+function changePassword_(p, user, token) {
   var me = readAll_('Kullanicilar').filter(function (x) { return x.kullanici_adi === user; })[0];
   if (!me) fail_('AUTH', 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
   var errs = {};
-  if (hash_(me.salt, String(p.eski || '')) !== me.sifre_hash) errs.eski = MSG.eskiSifre;
-  if (String(p.yeni || '').length < 6) errs.yeni = MSG.sifre;
+  if (!verifyPassword_(me, String(p.eski || ''))) errs.eski = MSG.eskiSifre;
+  if (!isValidPassword_(p.yeni)) errs.yeni = MSG.sifre;
   requireValid_(errs);
   var salt = newToken_().slice(0, 16);
-  update_('Kullanicilar', me._row, { kullanici_adi: me.kullanici_adi, sifre_hash: hash_(salt, String(p.yeni)), salt: salt, ad: me.ad });
+  update_('Kullanicilar', me._row, { kullanici_adi: me.kullanici_adi, sifre_hash: hashPassword_(salt, String(p.yeni)), salt: salt, ad: me.ad });
+  revokeTokens_(PropertiesService.getScriptProperties(), user, token);
   return null;
 }
 

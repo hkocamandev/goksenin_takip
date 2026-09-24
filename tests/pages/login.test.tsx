@@ -7,6 +7,7 @@ import { makeApi, renderApp } from '../helpers/renderApp';
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   window.location.hash = '';
 });
 
@@ -50,5 +51,26 @@ describe('giriş', () => {
     const { user } = await renderApp();
     await user.click((await screen.findAllByRole('button', { name: 'Çıkış yap' }))[0]);
     expect(await screen.findByRole('button', { name: 'Giriş yap' })).toBeInTheDocument();
+  });
+});
+
+describe('oturum saklama', () => {
+  it('"Beni hatırla" kapalıysa oturum yalnızca bu sekmede (sessionStorage) tutulur', async () => {
+    sessionStorage.clear();
+    const user = userEvent.setup();
+    render(<App api={makeApi()} />);
+    await user.click(screen.getByLabelText(/Beni hatırla/));
+    await loginAs(user, 'demo', 'demo123');
+    await screen.findAllByRole('link', { name: /Analiz/ });
+    expect(localStorage.getItem('goksenin-session')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('goksenin-session')!).kullanici_adi).toBe('demo');
+  });
+
+  it('çıkış yapınca form taslakları da silinir', async () => {
+    const { user } = await renderApp();
+    localStorage.setItem('goksenin-draft-Ödev', '{"x":1}');
+    await user.click((await screen.findAllByRole('button', { name: 'Çıkış yap' }))[0]);
+    await screen.findByRole('button', { name: 'Giriş yap' });
+    expect(localStorage.getItem('goksenin-draft-Ödev')).toBeNull();
   });
 });

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { MSG, validateExam, validateRecord, validateSubjects, validateTopics } from '../../src/lib/validation';
-import { TODAY, examCases, recordCases, subjectCases, topicCases } from '../fixtures/validationCases';
+import { MSG, validateExam, validateNewUser, validateRecord, validateSubjects, validateTopics } from '../../src/lib/validation';
+import { TODAY, examCases, recordCases, subjectCases, topicCases, userCases } from '../fixtures/validationCases';
 
 // Code.gs ve Seed.gs'yi Apps Script'in yaptığı gibi tek bir global kapsamda yükler.
 function loadGs(globals: Record<string, unknown> = {}) {
@@ -30,6 +30,9 @@ describe('Code.gs doğrulaması frontend ile birebir aynı', () => {
   });
   it.each(topicCases)('konular: $name', ({ input }) => {
     expect(plain(gs.validateTopics_(input))).toEqual(plain(validateTopics(input)));
+  });
+  it.each(userCases)('kullanıcı: $name', ({ input, existing }) => {
+    expect(plain(gs.validateNewUser_(input, existing))).toEqual(plain(validateNewUser(input, existing)));
   });
 });
 

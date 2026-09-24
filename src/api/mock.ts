@@ -3,7 +3,7 @@ import { sampleData } from './sample';
 import { seedSubjects, seedTopics } from './seed';
 import { todayIso } from '../lib/periods';
 import type { Exam, ExamInput, FieldErrors, RecordInput, RecordRow, Subject, Topic } from '../lib/types';
-import { MSG, validateExam, validateRecord, validateSubjects, validateTopics } from '../lib/validation';
+import { MSG, isSafeText, isValidPassword, validateExam, validateNewUser, validateRecord, validateSubjects, validateTopics } from '../lib/validation';
 
 interface MockUser {
   kullanici_adi: string;
@@ -179,6 +179,7 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
       const eski = String(p.eski ?? '').trim();
       const yeni = String(p.yeni ?? '').trim();
       if (!yeni) throw new ApiError('VALIDATION', MSG.ders, { yeni: MSG.ders });
+      if (!isSafeText(yeni)) throw new ApiError('VALIDATION', MSG.metin, { yeni: MSG.metin });
       if (eski === yeni) return null;
       if (db.dersler.some((s) => s.sinif === p.sinif && s.ders !== eski && lower(s.ders) === lower(yeni))) {
         throw new ApiError('VALIDATION', MSG.tekrar, { yeni: MSG.tekrar });
@@ -193,6 +194,7 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
       const eski = String(p.eski ?? '').trim();
       const yeni = String(p.yeni ?? '').trim();
       if (!yeni) throw new ApiError('VALIDATION', MSG.konu, { yeni: MSG.konu });
+      if (!isSafeText(yeni)) throw new ApiError('VALIDATION', MSG.metin, { yeni: MSG.metin });
       if (eski === yeni) return null;
       if (db.konular.some((t) => t.sinif === p.sinif && t.ders === p.ders && t.konu !== eski && lower(t.konu) === lower(yeni))) {
         throw new ApiError('VALIDATION', MSG.tekrar, { yeni: MSG.tekrar });
@@ -203,16 +205,8 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
       return null;
     },
     addUser: (p) => {
-      const u = String(p.kullanici_adi ?? '').trim().toLowerCase();
-      const ad = String(p.ad ?? '').trim();
-      const sifre = String(p.sifre ?? '');
-      const errs: FieldErrors = {};
-      if (!/^[a-z0-9._-]{3,30}$/.test(u)) errs.kullanici_adi = MSG.kullaniciAdi;
-      else if (db.kullanicilar.some((x) => x.kullanici_adi === u)) errs.kullanici_adi = MSG.tekrar;
-      if (!ad) errs.ad = MSG.adSoyad;
-      if (sifre.length < 6) errs.sifre = MSG.sifre;
-      requireValid(errs);
-      db.kullanicilar.push({ kullanici_adi: u, ad, sifre });
+      requireValid(validateNewUser(p as { kullanici_adi: string; ad: string; sifre: string }, db.kullanicilar.map((x) => x.kullanici_adi)));
+      db.kullanicilar.push({ kullanici_adi: String(p.kullanici_adi).trim().toLowerCase(), ad: String(p.ad).trim(), sifre: String(p.sifre) });
       return null;
     },
     changePassword: (p, user) => {
@@ -220,7 +214,7 @@ export function createMockTransport(opts: MockOptions = {}): Transport {
       if (!me) throw new ApiError('AUTH', AUTH_MSG);
       const errs: FieldErrors = {};
       if (String(p.eski ?? '') !== me.sifre) errs.eski = MSG.eskiSifre;
-      if (String(p.yeni ?? '').length < 6) errs.yeni = MSG.sifre;
+      if (!isValidPassword(p.yeni)) errs.yeni = MSG.sifre;
       requireValid(errs);
       me.sifre = String(p.yeni);
       return null;
