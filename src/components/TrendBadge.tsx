@@ -16,7 +16,7 @@ export function TrendBadge({ trend, delta }: { trend: Trend; delta: number | nul
   const Icon = ICON[trend];
   return (
     <span title={LABEL[trend]} className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums', STYLE[trend])}>
-      <Icon size={14} aria-hidden />
+      {trend !== 'none' && <Icon size={14} aria-hidden />}
       <span>{formatDelta(delta)}</span>
       <span className="sr-only">{LABEL[trend]}</span>
     </span>

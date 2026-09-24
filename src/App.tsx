@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router';
 import type { Api } from './api/api';
 import { apiConfig, defaultApi } from './api/index';
 import { Layout } from './components/Layout';
+import { AnalysisPage } from './pages/AnalysisPage';
 import { EntryPage } from './pages/entry/EntryPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthProvider, RequireAuth } from './state/AuthContext';
@@ -35,6 +36,7 @@ export function App({ api = defaultApi }: { api?: Api }) {
             }
           >
             <Route index element={<EntryPage />} />
+            <Route path="analiz" element={<AnalysisPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
