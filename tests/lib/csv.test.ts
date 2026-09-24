@@ -24,4 +24,9 @@ describe('toCsv (Türkçe Excel)', () => {
   it('; içeren metin tırnaklanır, net 15, oran 60', () => {
     expect(lines[3]).toBe('2026-09-24;8;Türkçe;Ödev;"Sözcükte Anlam; Deyimler";;25;16;3;6;15;60;demo');
   });
+  it('sekme veya satır başıyla başlayan formüller de etkisizleştirilir', () => {
+    const out = toCsv([rec({ konu: '\t=1+1' }), rec({ konu: '\r=2' })], []);
+    expect(out).toContain(`"'\t=1+1"`);
+    expect(out).toContain(`"'\r=2"`);
+  });
 });

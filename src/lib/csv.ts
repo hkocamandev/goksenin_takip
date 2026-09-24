@@ -7,8 +7,8 @@ const HEADERS = ['tarih', 'sinif', 'ders', 'kaynak', 'konu', 'deneme', 'soru', '
 function cell(v: string | number | null): string {
   if (v === null) return '';
   if (typeof v === 'number') return String(round2(v)).replace('.', ',');
-  const s = /^[=+\-@]/.test(v) ? `'${v}` : v;
-  return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  const s = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[";\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 export function toCsv(rows: readonly RecordRow[], exams: readonly Exam[]): string {
