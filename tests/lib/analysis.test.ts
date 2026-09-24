@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type BaseFilters,
   compareByKey, examSummaries, filterRecords, inRange, lastTwoPeriods, seriesByPeriod, summarize, trendOf,
 } from '../../src/lib/analysis';
 import type { Exam } from '../../src/lib/types';
 import { rec } from '../fixtures/records';
 
-const all = { sinif: 'all', dersler: [], kaynak: 'all' } as const;
+const all: BaseFilters = { sinif: 'all', dersler: [], kaynak: 'all' };
 
 describe('filterRecords', () => {
   const rows = [
