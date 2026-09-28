@@ -15,5 +15,5 @@ npx vitest run   # testler
 npm run build
 ```
 
-Yayına alma ve Google Sheet kurulumu için: [KURULUM.md](KURULUM.md)
+Yayına alma ve Google Sheet kurulumu için: [KURULUM.md](KURULUM.md) (yedekleme ve değişiklik günlüğü: 6. bölüm)
 Güvenlik: [GUVENLIK.md](GUVENLIK.md)

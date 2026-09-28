@@ -63,7 +63,7 @@ Bu belge uygulamanın neye karşı korunduğunu, hangi önlemlerin alındığın
 
 ## Bilinçli olarak kabul edilen riskler
 
-- **Tüm kullanıcılar eşit yetkili (tasarım gereği):** Ele geçirilen bir aile hesabı veri silebilir ve yeni kullanıcı ekleyebilir. Yedek için Sheet'in sürüm geçmişi kullanılabilir.
+- **Tüm kullanıcılar eşit yetkili (tasarım gereği):** Ele geçirilen bir aile hesabı veri silebilir ve yeni kullanıcı ekleyebilir. Silinen ya da değiştirilen veri `Degisiklikler` sekmesinden ve gecelik Drive yedeğinden geri alınabilir.
 - **Giriş kilidi kötüye kullanılabilir:** Birinin kullanıcı adını bilen biri 5 yanlış deneme yaparak o kişiyi 15 dakika dışarıda bırakabilir. Hesabın ele geçirilmesini önlemenin bedeli bu.
 - **Hizmet engelleme:** Apps Script adresi herkese açık. Çok yoğun istek, Google'ın Apps Script kotalarını zorlayabilir. Bu mimaride ağ düzeyinde hız sınırlama yapılamaz.
 - **Şifre özeti turu:** 2000 tur, Apps Script'in işlem süresi sınırları nedeniyle seçildi. Sheet sızarsa zayıf şifreler yine de kırılabilir; bu yüzden uzun ve benzersiz şifre önerilir.
@@ -78,5 +78,5 @@ Bu belge uygulamanın neye karşı korunduğunu, hangi önlemlerin alındığın
 - [ ] Code.gs'yi güncelledikten sonra **mevcut dağıtımı düzenleyip "Yeni sürüm"** seç. Yeni dağıtım oluşturma; adres değişir.
 - [ ] Aile üyelerine **en az 8 karakterli, başka yerde kullanılmayan** şifreler ver.
 - [ ] Bir cihaz kaybolursa o kullanıcının şifresini değiştir. Diğer oturumlar otomatik kapanır.
-- [ ] Ara sıra **Ayarlar → CSV indir** ile yedek al. Sheet'in *Dosya → Sürüm geçmişi* de geri dönüş sağlar.
+- [ ] Ara sıra Drive'daki **Göksenin Takip Yedekler** klasöründe o günün yedeğinin oluştuğuna bak. Ek güvence için **Ayarlar → CSV indir** ve Sheet'in *Dosya → Sürüm geçmişi* de kullanılabilir.
 - [ ] GitHub repo ayarlarında **Secret scanning** ve **Dependabot alerts** açık olsun: Settings → Code security.
