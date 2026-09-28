@@ -65,7 +65,11 @@ Kurulum (bir kez):
 
 Tetikleyiciyi **Tetikleyiciler (⏰)** menüsünden görebilirsin. Yedek alınamazsa Google hesabına hata e-postası gelir. Elle yedek için `yedekAl` fonksiyonunu çalıştırman yeterli.
 
-**Geri yükleme:** Yedek dosyasını aç, gereken satırları kopyalayıp asıl Sheet'teki aynı sekmeye yapıştır. Tek bir kaydı geri almak için `Degisiklikler` sekmesindeki eski değer genelde daha hızlıdır.
+**Ne zaman güncellenir:** Asıl sekmeler ve `Degisiklikler` siteden kaydedildiği an yazılır. Drive yedeği ise gecede bir alınan bir anlık görüntüdür; alındıktan sonra değişmez. Gün içinde kopya gerekirse `yedekAl` o günün yedeğini yenisiyle değiştirir.
+
+**Geri yükleme:**
+- *Tek kayıt:* `Degisiklikler` sekmesinde kaydın satırını bul (`kayit_id` ya da tarihle), `eski` sütunundaki değerlerle kaydı siteden yeniden gir.
+- *Toplu sorun:* Drive'daki yedek dosyasını aç, gereken satırları kopyalayıp asıl Sheet'teki aynı sekmeye yapıştır.
 
 ## Demo veri (isteğe bağlı)
 
@@ -85,7 +89,9 @@ Bu fonksiyonlar editörden çalıştırıldığı için yeni dağıtım gerekmez
 | "Kurulum tamamlanmamış" ekranı | `VITE_API_URL` değişkeni eksik; 4. adımı yapıp iş akışını yeniden çalıştır. |
 | "Sunucudan beklenmeyen yanıt geldi" | Web App erişimi "Herkes" değil ya da URL `/exec` ile bitmiyor. |
 | "Kayitlar sekmesi bulunamadı" | Apps Script'te `setup` çalıştırılmamış. |
+| `Degisiklikler` sekmesi yok | Sekme siteden yapılan ilk kayıtta oluşur. Hâlâ yoksa: `Code.gs` kaydedilmeden sürüm alınmış ya da yeni sürüm sitenin kullandığı dağıtıma (`VITE_API_URL`) verilmemiş. Kaydet → Dağıtımları yönet → doğru dağıtım → Yeni sürüm. Hata için Apps Script → **Yürütmeler**. |
 | Drive'da yedek oluşmuyor | `yedeklemeyiKur` çalıştırılmamış ya da izin verilmemiş; Tetikleyiciler (⏰) menüsünde `yedekAl` görünmeli. |
+| Site 404 veriyor, son yayın başarılı | Repoda Pages kapanmış olabilir: Settings → Pages → Source: **GitHub Actions**, sonra Actions'ta "Yayınla"yı yeniden çalıştır. |
 | Giriş yapılamıyor | Kullanıcı adı küçük harfle yazılmalı; ilk kullanıcı `SETUP_USER` değeridir. |
 
 Güvenlik önlemleri ve yapılması gerekenler için: [GUVENLIK.md](GUVENLIK.md)
