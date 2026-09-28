@@ -15,7 +15,7 @@ Bu rehber bir kez yapılır (~15 dakika). Sonunda paylaşılabilir bir link elde
      - `SETUP_PASS` → en az 8 karakterli şifre
      - `SETUP_NAME` → görünen ad (ör. `Hasan`)
 6. Editöre dön, üstteki fonksiyon listesinden `setup` seç ve **Çalıştır**. Google izin isteyecek: hesabını seç → *Gelişmiş* → *Göksenin Takip'e git (güvenli değil)* → *İzin ver*. (Bu uyarı, script'i senin yazdığın için çıkar.)
-7. Sheet'e dön: `Kayitlar`, `Denemeler`, `Dersler`, `Konular`, `Kullanicilar` sekmeleri oluşmuş olmalı. `SETUP_PASS` güvenlik için otomatik silinir.
+7. Sheet'e dön: `Kayitlar`, `Denemeler`, `Dersler`, `Konular`, `Kullanicilar`, `Degisiklikler` sekmeleri oluşmuş olmalı. `SETUP_PASS` güvenlik için otomatik silinir.
 
 ## 2. Web App olarak yayınla
 
@@ -49,6 +49,24 @@ Bu rehber bir kez yapılır (~15 dakika). Sonunda paylaşılabilir bir link elde
 - Linki gönder. Kişiye **Ayarlar → Kullanıcılar**'dan kendi hesabını aç ve kullanıcı adı/şifresini ilet.
 - Telefonda linki açıp tarayıcı menüsünden **Ana ekrana ekle** dersen uygulama gibi açılır.
 
+## 6. Yedekleme ve değişiklik günlüğü
+
+İki katman birlikte çalışır:
+
+- **Değişiklik günlüğü (`Degisiklikler` sekmesi):** Uygulamadan yapılan her ekleme, düzenleme ve silme bir satır yazar: zaman, kullanıcı, işlem, tablo, kayıt kimliği, **eski** ve **yeni** değer (JSON). Yanlışlıkla değiştirilen ya da silinen bir kaydın eski hali buradan okunup geri girilebilir. Şifre özetleri yazılmaz. Kendiliğinden çalışır; sekme yoksa ilk yazmada oluşur.
+- **Günlük yedek (Google Drive):** Her gece 03:00 civarı tüm sekmeler Drive'da **Göksenin Takip Yedekler** klasörüne `Göksenin Takip Yedek 2026-09-28` adıyla kopyalanır. Son 30 günün yedekleri ve her ayın ilk yedeği kalır; daha eskileri çöp kutusuna gider.
+
+Kurulum (bir kez):
+
+1. Apps Script editöründe `Code.gs`'yi bu repodaki güncel içerikle değiştir.
+2. **+ → Komut dosyası** ile `Yedek` adında yeni bir dosya ekle, `apps-script/Yedek.gs` içeriğini yapıştır ve kaydet.
+3. Fonksiyon listesinden `yedeklemeyiKur` seç → **Çalıştır**. Google, Drive ve tetikleyici için yeni izin ister; 1. bölümdeki gibi onayla. Günlükte "Yedek alındı: …" ve "Günlük yedekleme kuruldu" yazar; Drive'da klasör ve ilk yedek oluşur.
+4. Günlüğün uygulamada çalışması için dağıtımı yenile: Dağıt → *Dağıtımları yönet* → kalem → *Sürüm: Yeni sürüm* → Dağıt (URL değişmez).
+
+Tetikleyiciyi **Tetikleyiciler (⏰)** menüsünden görebilirsin. Yedek alınamazsa Google hesabına hata e-postası gelir. Elle yedek için `yedekAl` fonksiyonunu çalıştırman yeterli.
+
+**Geri yükleme:** Yedek dosyasını aç, gereken satırları kopyalayıp asıl Sheet'teki aynı sekmeye yapıştır. Tek bir kaydı geri almak için `Degisiklikler` sekmesindeki eski değer genelde daha hızlıdır.
+
 ## Demo veri (isteğe bağlı)
 
 Uygulamayı gerçek veriyle doldurmadan denemek için:
@@ -67,6 +85,7 @@ Bu fonksiyonlar editörden çalıştırıldığı için yeni dağıtım gerekmez
 | "Kurulum tamamlanmamış" ekranı | `VITE_API_URL` değişkeni eksik; 4. adımı yapıp iş akışını yeniden çalıştır. |
 | "Sunucudan beklenmeyen yanıt geldi" | Web App erişimi "Herkes" değil ya da URL `/exec` ile bitmiyor. |
 | "Kayitlar sekmesi bulunamadı" | Apps Script'te `setup` çalıştırılmamış. |
+| Drive'da yedek oluşmuyor | `yedeklemeyiKur` çalıştırılmamış ya da izin verilmemiş; Tetikleyiciler (⏰) menüsünde `yedekAl` görünmeli. |
 | Giriş yapılamıyor | Kullanıcı adı küçük harfle yazılmalı; ilk kullanıcı `SETUP_USER` değeridir. |
 
 Güvenlik önlemleri ve yapılması gerekenler için: [GUVENLIK.md](GUVENLIK.md)

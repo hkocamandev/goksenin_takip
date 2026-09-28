@@ -152,6 +152,7 @@ function demoVerileriOlustur() {
     prepareTextColumns_('Kayitlar', sheet_('Kayitlar').getLastRow() + data.kayitlar.length);
     appendMany_('Denemeler', data.denemeler);
     appendMany_('Kayitlar', data.kayitlar);
+    logChange_('sistem', 'demo ekle', 'Kayitlar', '', null, { kayit: data.kayitlar.length, deneme: data.denemeler.length });
     Logger.log('Demo veri eklendi: ' + data.kayitlar.length + ' kayıt satırı, ' + data.denemeler.length + ' deneme.');
   } finally {
     lock.releaseLock();
@@ -168,6 +169,7 @@ function demoVerileriniSil() {
     });
     var rows = keepRows_('Kayitlar', function (o) { return o.giren_kullanici !== DEMO_USER; });
     var exams = keepRows_('Denemeler', function (o) { return !demoExams[o.deneme_id]; });
+    logChange_('sistem', 'demo sil', 'Kayitlar', '', { kayit: rows, deneme: exams }, null);
     Logger.log('Silindi: ' + rows + ' kayıt satırı, ' + exams + ' deneme. Gerçek kayıtlara dokunulmadı.');
   } finally {
     lock.releaseLock();

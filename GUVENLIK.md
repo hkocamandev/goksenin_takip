@@ -50,6 +50,8 @@ Bu belge uygulamanın neye karşı korunduğunu, hangi önlemlerin alındığın
 - **Mock backend:** Üretimde hiç yüklenmez. Backend adresi olmadan derlenen site açıkça "Kurulum tamamlanmamış" der.
 - **Oturum saklama:** "Beni hatırla" kapalıysa oturum yalnızca o sekmede (sessionStorage) tutulur. Çıkışta form taslakları silinir.
 - **CSV dışa aktarma:** Formül enjeksiyonuna karşı korumalıdır (`= + - @ sekme satır başı`).
+- **Değişiklik günlüğü:** Her yazma işlemi `Degisiklikler` sekmesine kim, ne zaman, eski ve yeni değerle yazılır. Şifre özeti ve tuz günlüğe girmez.
+- **Günlük yedek:** Sheet her gece sahibinin Drive'ındaki özel bir klasöre kopyalanır. Yedekler `Kullanicilar` sekmesini (şifre özetleriyle) içerdiği için bu klasör **kimseyle paylaşılmamalıdır**.
 
 ### Tedarik zinciri ve yayın
 - **GitHub Actions:** Eylemler commit SHA'sına sabitlenmiştir. Her iş yalnızca ihtiyaç duyduğu yetkiye sahiptir; varsayılan yetki yoktur. Checkout kimlik bilgisini saklamaz.

@@ -9,7 +9,8 @@ var SHEETS = {
   Denemeler: ['deneme_id', 'ad', 'tarih', 'sinif'],
   Dersler: ['ders', 'sinif', 'deneme_soru_sayisi', 'sira'],
   Konular: ['ders', 'sinif', 'konu'],
-  Kullanicilar: ['kullanici_adi', 'sifre_hash', 'salt', 'ad']
+  Kullanicilar: ['kullanici_adi', 'sifre_hash', 'salt', 'ad'],
+  Degisiklikler: ['zaman', 'kullanici', 'islem', 'tablo', 'kayit_id', 'eski', 'yeni']
 };
 var NUMERIC_COLUMNS = ['sinif', 'soru', 'dogru', 'yanlis', 'bos', 'deneme_soru_sayisi', 'sira'];
 var SINGLE_SOURCES = ['Ödev', 'Kendi Çözdüğü'];
@@ -19,6 +20,8 @@ var HASH_ITER = 2000;
 var LOGIN_MAX_FAILS = 5;
 var LOGIN_LOCK_SECONDS = 15 * 60;
 var MAX_BODY = 2000000;
+var LOG_SHEET = 'Degisiklikler';
+var LOG_MAX = 49000; // Sheets hücre sınırı 50.000 karakter.
 
 var MSG = {
   tarihGecersiz: 'Geçerli bir tarih girin.',
@@ -487,6 +490,52 @@ function today_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
+/* ---------------- Değişiklik günlüğü ---------------- */
+
+// Her yazma işlemi kim, ne zaman, neyi değiştirdi diye Degisiklikler sekmesine bir satır ekler.
+// Eski değer burada kaldığı için yanlışlıkla değiştirilen ya da silinen bir kayıt geri konabilir.
+// Günlüğe yazılamazsa asıl işlem geri alınmaz; hata yalnızca Apps Script günlüğüne düşer.
+function logChange_(user, islem, tablo, kayitId, eski, yeni) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss.getSheetByName(LOG_SHEET)) prepareSheet_(ss, LOG_SHEET);
+    appendMany_(LOG_SHEET, [{
+      zaman: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
+      kullanici: user || 'sistem', islem: islem, tablo: tablo, kayit_id: kayitId || '',
+      eski: logValue_(eski), yeni: logValue_(yeni)
+    }]);
+  } catch (err) {
+    console.error(err && err.stack ? err.stack : err);
+  }
+}
+
+function logValue_(v) {
+  if (v === null || v === undefined) return '';
+  var s = JSON.stringify(v);
+  return s.length > LOG_MAX ? s.slice(0, LOG_MAX) + '…' : s;
+}
+
+// Liste kaydedilince yalnızca farkı yazar: bütün konu listesi tek hücreye sığmayabilir.
+function listDiff_(oldList, newList) {
+  var keySet = function (list) {
+    var set = {};
+    list.forEach(function (o) { set[JSON.stringify(o)] = true; });
+    return set;
+  };
+  var oldSet = keySet(oldList), newSet = keySet(newList);
+  return {
+    silinen: oldList.filter(function (o) { return !newSet[JSON.stringify(o)]; }),
+    eklenen: newList.filter(function (o) { return !oldSet[JSON.stringify(o)]; })
+  };
+}
+
+function examSnapshot_(exam, rows) {
+  return {
+    deneme: { deneme_id: exam.deneme_id, ad: exam.ad, tarih: exam.tarih, sinif: exam.sinif },
+    satirlar: rows.map(function (r) { return { ders: r.ders, soru: r.soru, dogru: r.dogru, yanlis: r.yanlis, bos: r.bos }; })
+  };
+}
+
 /* ---------------- Eylemler ---------------- */
 
 function getAll_() {
@@ -531,10 +580,11 @@ function addRecord_(p, user) {
   rec.giren_kullanici = user;
   rec.olusturma_zamani = new Date().toISOString();
   appendMany_('Kayitlar', [rec]);
+  logChange_(user, 'ekle', 'Kayitlar', rec.id, null, rec);
   return rec;
 }
 
-function updateRecord_(p) {
+function updateRecord_(p, user) {
   var old = findSingle_(p.id);
   var input = p.input || {};
   requireValid_(validateRecord_(input, today_()));
@@ -544,11 +594,14 @@ function updateRecord_(p) {
   rec.giren_kullanici = old.giren_kullanici;
   rec.olusturma_zamani = old.olusturma_zamani;
   update_('Kayitlar', old._row, rec);
+  logChange_(user, 'düzenle', 'Kayitlar', rec.id, strip_(old), rec);
   return rec;
 }
 
-function deleteRecord_(p) {
-  deleteRows_('Kayitlar', [findSingle_(p.id)._row]);
+function deleteRecord_(p, user) {
+  var old = findSingle_(p.id);
+  deleteRows_('Kayitlar', [old._row]);
+  logChange_(user, 'sil', 'Kayitlar', old.id, strip_(old), null);
   return null;
 }
 
@@ -582,6 +635,7 @@ function addExam_(p, user) {
   var rows = buildExamRows_(exam, input.satirlar, user, new Date().toISOString());
   appendMany_('Denemeler', [exam]);
   appendMany_('Kayitlar', rows);
+  logChange_(user, 'ekle', 'Denemeler', exam.deneme_id, null, examSnapshot_(exam, rows));
   return { exam: exam, rows: rows };
 }
 
@@ -597,34 +651,43 @@ function updateExam_(p, user) {
   deleteRows_('Kayitlar', oldRows.map(function (r) { return r._row; }));
   var rows = buildExamRows_(exam, input.satirlar, creator, created);
   appendMany_('Kayitlar', rows);
+  logChange_(user, 'düzenle', 'Denemeler', exam.deneme_id, examSnapshot_(old, oldRows), examSnapshot_(exam, rows));
   return { exam: exam, rows: rows };
 }
 
-function deleteExam_(p) {
+function deleteExam_(p, user) {
   var old = findExam_(p.deneme_id);
   var rows = readAll_('Kayitlar').filter(function (r) { return r.deneme_id === old.deneme_id; });
   deleteRows_('Kayitlar', rows.map(function (r) { return r._row; }));
   deleteRows_('Denemeler', [old._row]);
+  logChange_(user, 'sil', 'Denemeler', old.deneme_id, examSnapshot_(old, rows), null);
   return null;
 }
 
-function saveSubjects_(p) {
+function saveSubjects_(p, user) {
   var list = Array.isArray(p.dersler) ? p.dersler : [];
   requireValid_(validateSubjects_(list));
-  replaceAll_('Dersler', list.map(function (s) {
+  var next = list.map(function (s) {
     return { ders: s.ders.trim(), sinif: s.sinif, deneme_soru_sayisi: s.deneme_soru_sayisi, sira: s.sira };
-  }));
+  });
+  saveListLogged_('Dersler', next, user);
   return null;
 }
 
-function saveTopics_(p) {
+function saveTopics_(p, user) {
   var list = Array.isArray(p.konular) ? p.konular : [];
   requireValid_(validateTopics_(list));
-  replaceAll_('Konular', list.map(function (t) { return { ders: t.ders.trim(), sinif: t.sinif, konu: t.konu.trim() }; }));
+  saveListLogged_('Konular', list.map(function (t) { return { ders: t.ders.trim(), sinif: t.sinif, konu: t.konu.trim() }; }), user);
   return null;
 }
 
-function renameSubject_(p) {
+function saveListLogged_(name, next, user) {
+  var diff = listDiff_(readAll_(name).map(strip_), next);
+  replaceAll_(name, next);
+  if (diff.silinen.length || diff.eklenen.length) logChange_(user, 'liste kaydet', name, '', diff.silinen, diff.eklenen);
+}
+
+function renameSubject_(p, user) {
   var sinif = p.sinif, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.ders, { yeni: MSG.ders });
   if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
@@ -637,10 +700,11 @@ function renameSubject_(p) {
   renameWhere_('Dersler', 'ders', match, yeni);
   renameWhere_('Konular', 'ders', match, yeni);
   renameWhere_('Kayitlar', 'ders', match, yeni);
+  logChange_(user, 'ad değiştir', 'Dersler', '', { sinif: sinif, ders: eski }, { sinif: sinif, ders: yeni });
   return null;
 }
 
-function renameTopic_(p) {
+function renameTopic_(p, user) {
   var sinif = p.sinif, ders = p.ders, eski = String(p.eski || '').trim(), yeni = String(p.yeni || '').trim();
   if (!yeni) fail_('VALIDATION', MSG.konu, { yeni: MSG.konu });
   if (!isSafeText_(yeni)) fail_('VALIDATION', MSG.metin, { yeni: MSG.metin });
@@ -652,15 +716,18 @@ function renameTopic_(p) {
   var match = function (o) { return o.sinif === sinif && o.ders === ders && o.konu === eski; };
   renameWhere_('Konular', 'konu', match, yeni);
   renameWhere_('Kayitlar', 'konu', match, yeni);
+  logChange_(user, 'ad değiştir', 'Konular', '', { sinif: sinif, ders: ders, konu: eski }, { sinif: sinif, ders: ders, konu: yeni });
   return null;
 }
 
-function addUser_(p) {
+// Şifre özeti ve tuz günlüğe yazılmaz.
+function addUser_(p, user) {
   var existing = readAll_('Kullanicilar').map(function (x) { return x.kullanici_adi; });
   requireValid_(validateNewUser_(p, existing));
   var u = String(p.kullanici_adi).trim().toLowerCase();
   var salt = newToken_().slice(0, 16);
   appendMany_('Kullanicilar', [{ kullanici_adi: u, sifre_hash: hashPassword_(salt, String(p.sifre)), salt: salt, ad: String(p.ad).trim() }]);
+  logChange_(user || 'kurulum', 'kullanıcı ekle', 'Kullanicilar', u, null, { kullanici_adi: u, ad: String(p.ad).trim() });
   return null;
 }
 
@@ -674,23 +741,27 @@ function changePassword_(p, user, token) {
   var salt = newToken_().slice(0, 16);
   update_('Kullanicilar', me._row, { kullanici_adi: me.kullanici_adi, sifre_hash: hashPassword_(salt, String(p.yeni)), salt: salt, ad: me.ad });
   revokeTokens_(PropertiesService.getScriptProperties(), user, token);
+  logChange_(user, 'şifre değiştir', 'Kullanicilar', user, null, null);
   return null;
 }
 
 /* ---------------- Kurulum (bir kez elle çalıştırılır) ---------------- */
 
+function prepareSheet_(ss, name) {
+  var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+  var h = SHEETS[name];
+  sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  // Metin sütunları düz metin: Sheets tarihleri ve kimlikleri dönüştürmesin.
+  h.forEach(function (col, j) {
+    if (NUMERIC_COLUMNS.indexOf(col) === -1) sh.getRange(1, j + 1, sh.getMaxRows(), 1).setNumberFormat('@');
+  });
+  return sh;
+}
+
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  Object.keys(SHEETS).forEach(function (name) {
-    var sh = ss.getSheetByName(name) || ss.insertSheet(name);
-    var h = SHEETS[name];
-    sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold');
-    sh.setFrozenRows(1);
-    // Metin sütunları düz metin: Sheets tarihleri ve kimlikleri dönüştürmesin.
-    h.forEach(function (col, j) {
-      if (NUMERIC_COLUMNS.indexOf(col) === -1) sh.getRange(1, j + 1, sh.getMaxRows(), 1).setNumberFormat('@');
-    });
-  });
+  Object.keys(SHEETS).forEach(function (name) { prepareSheet_(ss, name); });
   if (readAll_('Dersler').length === 0) replaceAll_('Dersler', seedSubjects_());
   if (readAll_('Konular').length === 0) replaceAll_('Konular', seedTopics_());
   var props = PropertiesService.getScriptProperties();
