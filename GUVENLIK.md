@@ -57,6 +57,7 @@ Bu belge uygulamanın neye karşı korunduğunu, hangi önlemlerin alındığın
   - `npm ci --ignore-scripts`: kilit dosyasına sadık kurulum, paket betikleri çalışmaz.
   - `npm audit --audit-level=high`: yüksek önemde açık varsa yayın durur.
   - Dependabot: npm paketleri ve GitHub Actions için haftalık güncelleme önerileri açar.
+  - Test iş akışı: `main`'e açılan her PR'da (Dependabot dahil) aynı denetim, testler ve derleme birleştirmeden önce çalışır. Salt okunur yetkiyle çalışır, sır kullanmaz.
 
 ## Bilinçli olarak kabul edilen riskler
 
